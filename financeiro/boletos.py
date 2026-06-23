@@ -42,8 +42,8 @@ class Boleto:
     vencimento: date | None
     situacao: str
     data_liquidacao: date | None
-    valor: Decimal
-    valor_liquidacao: Decimal
+    valor: Decimal             # valor NOMINAL do boleto (a venda)
+    valor_liquidacao: Decimal  # valor de fato creditado (nominal +/- ajuste)
     tipo_liquidacao: str
 
     @property
@@ -55,13 +55,38 @@ class Boleto:
         """True se liquida como crédito COBRANÇA no extrato (vs. PIX avulso)."""
         return self.tipo_liquidacao.strip().upper() != "PIX"
 
+    @property
+    def ajuste(self) -> Decimal:
+        """Liquidação − nominal. Positivo = juros/multa; negativo = desconto."""
+        return self.valor_liquidacao - self.valor
+
+    @property
+    def juros_multa(self) -> Decimal:
+        return self.ajuste if self.ajuste > 0 else Decimal("0")
+
+    @property
+    def desconto(self) -> Decimal:
+        return -self.ajuste if self.ajuste < 0 else Decimal("0")
+
 
 @dataclass
 class Lote:
     data: date
     tipo: str                  # "COBRANÇA" | "PIX"
-    valor: Decimal
+    valor: Decimal             # soma do valor LIQUIDADO (o que casa com o extrato)
     boletos: list[Boleto] = field(default_factory=list)
+
+    @property
+    def valor_nominal(self) -> Decimal:
+        return sum((b.valor for b in self.boletos), Decimal("0"))
+
+    @property
+    def juros_multa(self) -> Decimal:
+        return sum((b.juros_multa for b in self.boletos), Decimal("0"))
+
+    @property
+    def desconto(self) -> Decimal:
+        return sum((b.desconto for b in self.boletos), Decimal("0"))
 
 
 @dataclass
@@ -221,9 +246,14 @@ def _brl(v: Decimal) -> str:
 def relatorio_texto(res: ResultadoBoletos) -> str:
     n_ok = len(res.lotes_conciliados)
     n_pd = len(res.lotes_pendentes)
-    val_ok = sum((l.valor for l, _ in res.lotes_conciliados), Decimal("0"))
+    lotes_ok = [l for l, _ in res.lotes_conciliados]
+    val_ok = sum((l.valor for l in lotes_ok), Decimal("0"))
+    nominal = sum((l.valor_nominal for l in lotes_ok), Decimal("0"))
+    juros = sum((l.juros_multa for l in lotes_ok), Decimal("0"))
+    desconto = sum((l.desconto for l in lotes_ok), Decimal("0"))
     val_pd = sum((l.valor for l in res.lotes_pendentes), Decimal("0"))
-    bol_ok = sum(len(l.boletos) for l, _ in res.lotes_conciliados)
+    bol_ok = sum(len(l.boletos) for l in lotes_ok)
+    com_ajuste = [b for l in lotes_ok for b in l.boletos if b.ajuste != 0]
 
     L = ["# Conciliação de boletos (lotes de cobrança)", ""]
     L.append(f"- Lotes conciliados: {n_ok}/{n_ok + n_pd} — {_brl(val_ok)} ({bol_ok} boletos)")
@@ -231,6 +261,21 @@ def relatorio_texto(res: ResultadoBoletos) -> str:
     if res.lotes_fora_periodo:
         L.append(f"- (Fora do período do OFX: {res.lotes_fora_periodo} lotes — {_brl(res.valor_fora_periodo)})")
     L.append("")
+    L.append("## Composição dos recebimentos conciliados")
+    L.append(f"- Valor nominal (vendas):    {_brl(nominal)}")
+    L.append(f"- (+) Juros/multa recebidos: {_brl(juros)}   ← receita financeira")
+    L.append(f"- (−) Descontos concedidos:  {_brl(desconto)}")
+    L.append(f"- (=) Total liquidado:       {_brl(val_ok)}")
+    L.append("")
+    if com_ajuste:
+        L.append("### Boletos com juros/multa ou desconto")
+        for b in sorted(com_ajuste, key=lambda x: -abs(x.ajuste)):
+            tag = "juros/multa" if b.ajuste > 0 else "desconto"
+            L.append(
+                f"- NF {b.seu_numero} {b.pagador[:24]} — nominal {_brl(b.valor)} "
+                f"→ liquidado {_brl(b.valor_liquidacao)} ({tag} {_brl(abs(b.ajuste))})"
+            )
+        L.append("")
     if res.lotes_pendentes:
         L.append("## ⚠️ Lotes sem crédito correspondente no extrato")
         L.append("_Possível: fora do período do OFX, liquidação avulsa, ou tarifa._")

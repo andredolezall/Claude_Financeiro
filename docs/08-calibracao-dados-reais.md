@@ -68,6 +68,13 @@ efeito de borda). Conciliação exata, sem heurística.
 - `Seu Número` liga cada crédito à venda na planilha CR (próximo passo: marcar o título
   CR como conciliado via o boleto, fechando a conciliação ponta a ponta).
 
+### Separação de juros/multa × desconto × nominal
+O relatório não tem coluna de juros, mas a diferença `Valor Liquidação − Valor` (nominal)
+revela o ajuste: positivo = **juros/multa** (receita financeira), negativo = **desconto**.
+`/conciliar-boletos` separa e totaliza isso (nominal + juros − desconto = liquidado) e
+lista cada boleto ajustado. No xls de exemplo: 8 com juros (R$ 1.655,91) e 1 desconto
+(R$ 172,00). Útil para a DRE (segrega receita de venda de receita financeira).
+
 ### Recomendações operacionais
 - Use OFX e consultaCBR do **mesmo período** (mês fechado) para conciliação limpa.
 - Boletos liquidados via PIX caem como crédito PIX avulso (tratados em bucket separado).

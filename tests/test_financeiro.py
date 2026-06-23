@@ -67,18 +67,26 @@ def test_boletos_lotes():
         return B.Boleto("Cliente", "00.000.000/0001-00", seu, "NN", _date(2026, 5, 20),
                         "Liquidado", d, Decimal(valor), Decimal(valor), tipo)
 
-    bs = [boleto("1", "100.00"), boleto("2", "250.00"), boleto("3", "30.00", "PIX")]
-    # Extrato: um COBRANÇA = 350,00 (soma dos 2 boletos) e um PIX = 30,00
+    def boleto_juros(seu, nominal, liquidado, d=_date(2026, 6, 1)):
+        return B.Boleto("Cliente", "00.000.000/0001-00", seu, "NN", _date(2026, 5, 20),
+                        "Liquidado", d, Decimal(nominal), Decimal(liquidado), "Via Compe")
+
+    # boleto 1 nominal 100; boleto 2 nominal 250 liquidado 270 (juros 20) → COBRANÇA = 370
+    bs = [boleto("1", "100.00"), boleto_juros("2", "250.00", "270.00"),
+          boleto("3", "30.00", "PIX")]
     ext = Extrato("001", "1-1", "CHECKING", "BRL", None, None, [
-        Transacao(_date(2026, 6, 1), Decimal("350.00"), "CREDIT", "COBRANCA", "c1"),
+        Transacao(_date(2026, 6, 1), Decimal("370.00"), "CREDIT", "COBRANCA", "c1"),
         Transacao(_date(2026, 6, 1), Decimal("30.00"), "CREDIT", "PIX - RECEBIDO", "c2"),
     ])
     res = B.conciliar(bs, [ext])
     assert len(res.lotes_conciliados) == 2
     assert res.lotes_pendentes == []
-    # o lote COBRANÇA agregou os 2 boletos
     cobr = [l for l, _ in res.lotes_conciliados if l.tipo == "COBRANÇA"][0]
-    assert len(cobr.boletos) == 2 and cobr.valor == Decimal("350.00")
+    assert len(cobr.boletos) == 2 and cobr.valor == Decimal("370.00")
+    # separação nominal × juros
+    assert cobr.valor_nominal == Decimal("350.00")
+    assert cobr.juros_multa == Decimal("20.00")
+    assert cobr.desconto == Decimal("0")
 
 
 def _run_all():
