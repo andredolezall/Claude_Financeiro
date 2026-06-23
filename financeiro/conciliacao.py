@@ -153,6 +153,59 @@ def carregar_cr_xlsx(
 # --------------------------------------------------------------------------- #
 # Conciliação
 # --------------------------------------------------------------------------- #
+def carregar_cp_xlsx(
+    caminho: str,
+    aba: str = "CP - Contas a Pagar",
+    apenas_pagos: bool = True,
+) -> list[Titulo]:
+    """Carrega contas a pagar da aba CP do Fluxo de Caixa.
+
+    Por padrão traz só os pagos (Pago? = S), que devem ter um débito correspondente.
+    Usa DATA PGTO como data esperada do movimento e NOVO VENC como vencimento.
+    """
+    titulos: list[Titulo] = []
+    for reg in read_table(caminho, aba):
+        bruto = reg.get("VALOR")
+        if bruto in (None, ""):
+            continue
+        try:
+            valor = _parse_valor(bruto)
+        except Exception:
+            continue
+        if valor == 0:
+            continue
+        pago = (reg.get("Pago?") or reg.get("PAGO?") or "").strip().upper() == "S"
+        if apenas_pagos and not pago:
+            continue
+        fornecedor = (reg.get("FORNECEDOR") or "").strip()
+        venc = excel_serial_to_date(reg.get("NOVO VENC")) or excel_serial_to_date(
+            reg.get("VENC ORIGINAL")
+        )
+        titulos.append(
+            Titulo(
+                tipo="pagar",
+                vencimento=venc,
+                valor=valor,
+                descricao=fornecedor,
+                documento=(reg.get("CLASSIFICAÇÃO") or "").strip(),
+                cliente=fornecedor,
+                data_recebimento=excel_serial_to_date(reg.get("DATA PGTO")),
+                pago=pago,
+                forma_pgto=(reg.get("FORMA DE PGTO") or "").strip(),
+                centro=(reg.get("CENTRO DE CUSTO") or "").strip(),
+            )
+        )
+    return titulos
+
+
+def carregar_xlsx(caminho: str, aba: str) -> list[Titulo]:
+    """Seleciona o carregador certo pela aba (CP = pagar, CR = receber)."""
+    nome = aba.strip().upper()
+    if nome.startswith("CP"):
+        return carregar_cp_xlsx(caminho, aba=aba)
+    return carregar_cr_xlsx(caminho, aba=aba)
+
+
 def conciliar(
     extratos: list[Extrato],
     titulos: list[Titulo],
@@ -224,27 +277,36 @@ def relatorio_texto(r: ResultadoConciliacao, limite: int = 15) -> str:
     val_aberto = sum((t.valor for t in r.titulos_em_aberto), Decimal("0"))
     val_sem = sum((abs(t.valor) for t in r.extrato_sem_titulo), Decimal("0"))
 
+    # Adapta o vocabulário a pagar (débito) ou receber (crédito).
+    amostra = (r.conciliados[0].titulo if r.conciliados
+               else r.titulos_em_aberto[0] if r.titulos_em_aberto else None)
+    pagar = amostra is not None and amostra.tipo == "pagar"
+    realizado = "pagos" if pagar else "recebidos"
+    contra = "débito" if pagar else "crédito"
+    mov = "Débitos" if pagar else "Créditos"
+
     L = ["# Conciliação bancária", ""]
     L.append(f"- Conciliados: {len(r.conciliados)}/{considerados} ({pct:.0f}%) — {_brl(val_conc)}")
-    L.append(f"- Títulos esperados sem crédito no banco: {len(r.titulos_em_aberto)} — {_brl(val_aberto)}")
-    L.append(f"- Movimentos do banco sem título: {len(r.extrato_sem_titulo)} — {_brl(val_sem)}")
+    L.append(f"- Títulos {realizado} sem {contra} no banco: {len(r.titulos_em_aberto)} — {_brl(val_aberto)}")
+    L.append(f"- {mov} do banco sem título: {len(r.extrato_sem_titulo)} — {_brl(val_sem)}")
     if r.ignorados_fora_periodo:
         L.append(f"- (Ignorados, fora do período do extrato: {r.ignorados_fora_periodo})")
     L.append("")
 
     if r.titulos_em_aberto:
-        L.append("## ⚠️ Títulos marcados recebidos, mas sem crédito correspondente")
-        L.append("_Possível: caiu em lote/depósito agregado, líquido de tarifa, ou data divergente._")
+        L.append(f"## ⚠️ Títulos marcados {realizado}, mas sem {contra} correspondente")
+        L.append("_Possível: caiu em lote (COBRANÇA), líquido de tarifa, ou fora do período do OFX._")
         for t in r.titulos_em_aberto[:limite]:
             d = t.data_esperada
-            L.append(f"- NF {t.documento or '—'} {t.cliente[:28]} — {_brl(t.valor)} ({t.forma_pgto}) em {d}")
+            doc = (t.documento or t.cliente)[:30]
+            L.append(f"- {doc} — {_brl(t.valor)} ({t.forma_pgto}) em {d}")
         if len(r.titulos_em_aberto) > limite:
             L.append(f"- … +{len(r.titulos_em_aberto) - limite} títulos")
         L.append("")
 
     if r.extrato_sem_titulo:
-        L.append("## ⚠️ Créditos no banco sem título correspondente")
-        L.append("_Possível: transferência, estorno, recebimento não lançado na planilha, ou lote._")
+        L.append(f"## ⚠️ {mov} no banco sem título correspondente")
+        L.append("_Possível: lote, transferência, estorno, ou movimento não lançado na planilha._")
         for t in sorted(r.extrato_sem_titulo, key=lambda x: -abs(x.valor))[:limite]:
             L.append(f"- {t.data} {_brl(abs(t.valor))} — {t.descricao[:50]}")
         if len(r.extrato_sem_titulo) > limite:

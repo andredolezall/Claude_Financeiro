@@ -43,6 +43,16 @@ planilha **Fluxo de Caixa 2026**, aba **CR - Contas a Receber**.
 4. **Tarifa de boleto.** Boletos podem entrar líquidos de tarifa — prever tolerância
    de centavos ou conciliar pelo valor líquido quando vier do CNAB.
 
+## Contas a Pagar (aba CP) — calibrado
+
+- 4.914 lançamentos; 3.404 pagos. Colunas: `FORNECEDOR`, `VALOR`, `NOVO VENC`,
+  `DATA PGTO`, `FORMA DE PGTO`, `Pago?`, `CENTRO DE CUSTO`, `CLASSIFICAÇÃO`.
+- Conciliação CP × débitos do OFX (junho): **229/606 (38%)** — R$ 581k casados.
+- Mesmo padrão da CR: boletos pagos em lote e títulos de fim de maio fora do OFX de junho.
+- `DATA PGTO` está sempre preenchida e bem distribuída (sem fallback) — sem problema de dado.
+
+Uso: `--aba "CP - Contas a Pagar"`. O carregador é selecionado automaticamente pela aba.
+
 ## Decisão em aberto (D8)
 Como tratar os lotes de boleto: **CNAB retorno** (exato) vs. **heurística de soma**?
 Depende de você conseguir extrair o arquivo de retorno da cobrança no BB.

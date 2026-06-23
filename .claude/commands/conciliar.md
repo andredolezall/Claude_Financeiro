@@ -9,7 +9,9 @@ MaxiProd) e destaque o que precisa de ação humana.
 Passos:
 1. Execute: `python3 -m financeiro.cli conciliar $ARGUMENTS`
    - Os títulos vão em `--titulos`, aceitando dois formatos:
-     - **Planilha .xlsx** (Fluxo de Caixa) → lê a aba `--aba "CR - Contas a Receber"`.
+     - **Planilha .xlsx** (Fluxo de Caixa). Escolha a aba com `--aba`:
+       - `--aba "CR - Contas a Receber"` → concilia recebíveis contra créditos.
+       - `--aba "CP - Contas a Pagar"` → concilia contas a pagar contra débitos.
      - **CSV genérico**: `tipo;data_vencimento;valor;descricao;documento`.
    - Boletos liquidam em LOTE (créditos `COBRANÇA`): o casamento 1:1 não cobre tudo —
      ver `docs/08-calibracao-dados-reais.md` e a decisão D8 sobre conciliação por lote.

@@ -26,7 +26,7 @@ def _cmd_fluxo(args: argparse.Namespace) -> int:
 def _cmd_conciliar(args: argparse.Namespace) -> int:
     extratos = [parse_ofx(c) for c in args.extratos]
     if args.titulos.lower().endswith(".xlsx"):
-        titulos = conciliacao.carregar_cr_xlsx(args.titulos, aba=args.aba)
+        titulos = conciliacao.carregar_xlsx(args.titulos, aba=args.aba)
     else:
         titulos = conciliacao.carregar_titulos(args.titulos)
     resultado = conciliacao.conciliar(extratos, titulos, janela_dias=args.janela)
