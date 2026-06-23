@@ -87,6 +87,14 @@ parcelas → vários boletos. Validação real: **314/332 NFs** com soma batendo
   renegociação). Caso de boletos idênticos (mesmo valor e data) → **ambíguo**, revisão manual.
 - Comando `/preencher-cr` · CLI `financeiro.cli preencher` (gera CSV opcional).
 
+### D9 — RESOLVIDA: DATA RECEBIMENTO = data de liquidação do boleto
+Comparando maio (engine × lançamento manual): a data lançada à mão era, na maioria,
+**liquidação + 1 dia** (113 casos), mas inconsistente (+0: 49; +3: 6; −2/−3: 2). Como o
+banco credita na própria data de liquidação (provado: soma dos boletos = COBRANÇA do OFX
+no mesmo dia), adotamos **DATA RECEBIMENTO = Data Situação do boleto** — consistente,
+correta para DRE Caixa/PMR e sem depender do OFX. Teste maio: 177 NFs conciliadas, 194
+linhas a preencher (R$ 309.318,16), 7 divergentes.
+
 ### Recomendações operacionais
 - Use OFX e consultaCBR do **mesmo período** (mês fechado) para conciliação limpa.
 - Boletos liquidados via PIX caem como crédito PIX avulso (tratados em bucket separado).
