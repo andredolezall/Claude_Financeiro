@@ -8,8 +8,11 @@ MaxiProd) e destaque o que precisa de ação humana.
 
 Passos:
 1. Execute: `python3 -m financeiro.cli conciliar $ARGUMENTS`
-   (o CSV de títulos vai em `--titulos`; o schema esperado está em
-   `financeiro/conciliacao.py`: `tipo;data_vencimento;valor;descricao;documento`).
+   - Os títulos vão em `--titulos`, aceitando dois formatos:
+     - **Planilha .xlsx** (Fluxo de Caixa) → lê a aba `--aba "CR - Contas a Receber"`.
+     - **CSV genérico**: `tipo;data_vencimento;valor;descricao;documento`.
+   - Boletos liquidam em LOTE (créditos `COBRANÇA`): o casamento 1:1 não cobre tudo —
+     ver `docs/08-calibracao-dados-reais.md` e a decisão D8 sobre conciliação por lote.
 2. Apresente o relatório.
 3. Para cada **título em aberto**, sugira a causa provável (atraso, valor divergente,
    ainda não pago/recebido) e a próxima ação.

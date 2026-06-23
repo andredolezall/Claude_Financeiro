@@ -25,7 +25,10 @@ def _cmd_fluxo(args: argparse.Namespace) -> int:
 
 def _cmd_conciliar(args: argparse.Namespace) -> int:
     extratos = [parse_ofx(c) for c in args.extratos]
-    titulos = conciliacao.carregar_titulos(args.titulos)
+    if args.titulos.lower().endswith(".xlsx"):
+        titulos = conciliacao.carregar_cr_xlsx(args.titulos, aba=args.aba)
+    else:
+        titulos = conciliacao.carregar_titulos(args.titulos)
     resultado = conciliacao.conciliar(extratos, titulos, janela_dias=args.janela)
     print(conciliacao.relatorio_texto(resultado))
     return 0
@@ -41,7 +44,8 @@ def main(argv: list[str] | None = None) -> int:
 
     p_conc = sub.add_parser("conciliar", help="Concilia extrato OFX com títulos CSV")
     p_conc.add_argument("extratos", nargs="+", help="Arquivos .ofx")
-    p_conc.add_argument("--titulos", required=True, help="CSV de títulos (MaxiProd)")
+    p_conc.add_argument("--titulos", required=True, help="Títulos: CSV genérico ou planilha .xlsx")
+    p_conc.add_argument("--aba", default="CR - Contas a Receber", help="Aba do .xlsx (default CR)")
     p_conc.add_argument("--janela", type=int, default=3, help="Janela de dias para casar (default 3)")
     p_conc.set_defaults(func=_cmd_conciliar)
 

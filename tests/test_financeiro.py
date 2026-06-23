@@ -48,11 +48,12 @@ def test_conciliacao():
     titulos = conciliacao.carregar_titulos(CSV)
     assert len(titulos) == 5
     r = conciliacao.conciliar([parse_ofx(OFX)], titulos, janela_dias=3)
-    # 4 títulos casam (incl. NF 1024 que venceu 16 e caiu 15); NF 1025 fica em aberto.
+    # 4 títulos casam (incl. NF 1024 que venceu 16 e caiu 15).
     assert len(r.conciliados) == 4
-    docs_abertos = {t.documento for t in r.titulos_em_aberto}
-    assert docs_abertos == {"1025"}
-    # DARF e Tarifa são movimentos legítimos sem título correspondente.
+    # NF 1025 vence 25/06, fora do período do extrato (termina 20/06 +3) → ignorada.
+    assert r.ignorados_fora_periodo == 1
+    assert r.titulos_em_aberto == []
+    # DARF e Tarifa são débitos legítimos sem título correspondente.
     sem_titulo = {t.id_fit for t in r.extrato_sem_titulo}
     assert sem_titulo == {"0003", "0004"}
 
