@@ -53,6 +53,21 @@ planilha **Fluxo de Caixa 2026**, aba **CR - Contas a Receber**.
 
 Uso: `--aba "CP - Contas a Pagar"`. O carregador é selecionado automaticamente pela aba.
 
-## Decisão em aberto (D8)
-Como tratar os lotes de boleto: **CNAB retorno** (exato) vs. **heurística de soma**?
-Depende de você conseguir extrair o arquivo de retorno da cobrança no BB.
+## D8 — RESOLVIDA: relatório consultaCBR do BB
+
+O BB exporta o relatório **consultaCBR** (.xls) com cada boleto: `Seu Número` (= NF da
+planilha), `Situação`, `Data Situação`, `Valor` e `Valor Liquidação`. Boletos liquidados
+no mesmo dia somam exatamente o crédito `COBRANÇA` do extrato.
+
+**Validação (junho/2026):** a soma diária dos boletos bateu **ao centavo** com o crédito
+COBRANÇA do OFX em **15 de 16 dias** (o único fora foi 23/06, último dia do extrato —
+efeito de borda). Conciliação exata, sem heurística.
+
+- Módulo: `financeiro/boletos.py` · Comando: `/conciliar-boletos` · CLI: `financeiro.cli boletos`.
+- `.xls` requer `xlrd`; `.xlsx` lê sem dependência.
+- `Seu Número` liga cada crédito à venda na planilha CR (próximo passo: marcar o título
+  CR como conciliado via o boleto, fechando a conciliação ponta a ponta).
+
+### Recomendações operacionais
+- Use OFX e consultaCBR do **mesmo período** (mês fechado) para conciliação limpa.
+- Boletos liquidados via PIX caem como crédito PIX avulso (tratados em bucket separado).

@@ -58,6 +58,29 @@ def test_conciliacao():
     assert sem_titulo == {"0003", "0004"}
 
 
+def test_boletos_lotes():
+    from datetime import date as _date
+    from financeiro import boletos as B
+    from financeiro.ofx import Extrato, Transacao
+
+    def boleto(seu, valor, tipo="Via Compe", d=_date(2026, 6, 1)):
+        return B.Boleto("Cliente", "00.000.000/0001-00", seu, "NN", _date(2026, 5, 20),
+                        "Liquidado", d, Decimal(valor), Decimal(valor), tipo)
+
+    bs = [boleto("1", "100.00"), boleto("2", "250.00"), boleto("3", "30.00", "PIX")]
+    # Extrato: um COBRANÇA = 350,00 (soma dos 2 boletos) e um PIX = 30,00
+    ext = Extrato("001", "1-1", "CHECKING", "BRL", None, None, [
+        Transacao(_date(2026, 6, 1), Decimal("350.00"), "CREDIT", "COBRANCA", "c1"),
+        Transacao(_date(2026, 6, 1), Decimal("30.00"), "CREDIT", "PIX - RECEBIDO", "c2"),
+    ])
+    res = B.conciliar(bs, [ext])
+    assert len(res.lotes_conciliados) == 2
+    assert res.lotes_pendentes == []
+    # o lote COBRANÇA agregou os 2 boletos
+    cobr = [l for l, _ in res.lotes_conciliados if l.tipo == "COBRANÇA"][0]
+    assert len(cobr.boletos) == 2 and cobr.valor == Decimal("350.00")
+
+
 def _run_all():
     falhas = 0
     for nome, fn in sorted(globals().items()):
