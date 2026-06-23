@@ -239,6 +239,40 @@ def conciliar(
 # --------------------------------------------------------------------------- #
 # Relatório
 # --------------------------------------------------------------------------- #
+def tabela_liquidacoes(boletos: list[Boleto]) -> list[dict[str, object]]:
+    """Uma linha por boleto liquidado, pronta para preencher a aba CR.
+
+    Chave de casamento na planilha: NF + VALOR NOMINAL (há NFs com parcelas
+    de mesmo valor — nesses casos cada linha CR corresponde a um boleto).
+    """
+    linhas = []
+    for b in boletos:
+        if not b.liquidado:
+            continue
+        linhas.append({
+            "NF": b.seu_numero,
+            "VALOR NOMINAL": f"{b.valor:.2f}",
+            "PAGO?": "S",
+            "DATA RECEBIMENTO": b.data_liquidacao.strftime("%d/%m/%Y"),
+            "VALOR LIQUIDADO": f"{b.valor_liquidacao:.2f}",
+            "JUROS/MULTA": f"{b.juros_multa:.2f}",
+            "DESCONTO": f"{b.desconto:.2f}",
+            "FORMA": b.tipo_liquidacao,
+            "PAGADOR": b.pagador,
+        })
+    return sorted(linhas, key=lambda x: (x["DATA RECEBIMENTO"], x["NF"]))
+
+
+def escrever_csv(linhas: list[dict[str, object]], caminho: str) -> None:
+    import csv
+    if not linhas:
+        return
+    with open(caminho, "w", encoding="utf-8-sig", newline="") as f:
+        w = csv.DictWriter(f, fieldnames=list(linhas[0].keys()), delimiter=";")
+        w.writeheader()
+        w.writerows(linhas)
+
+
 def _brl(v: Decimal) -> str:
     return "R$ " + f"{v:,.2f}".replace(",", "_").replace(".", ",").replace("_", ".")
 
