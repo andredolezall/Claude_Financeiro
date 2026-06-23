@@ -75,6 +75,18 @@ revela o ajuste: positivo = **juros/multa** (receita financeira), negativo = **d
 lista cada boleto ajustado. No xls de exemplo: 8 com juros (R$ 1.655,91) e 1 desconto
 (R$ 172,00). Útil para a DRE (segrega receita de venda de receita financeira).
 
+### Conciliação por NF para preencher a CR (preenchimento.py)
+A unidade de conciliação é a **NF**: soma todas as linhas da CR (PVs) e todos os boletos
+da NF, e bate as somas. Resolve os dois casos reais — vários PVs → 1 boleto, e 1 NF em
+parcelas → vários boletos. Validação real: **314/332 NFs** com soma batendo.
+
+- Chave de casamento: **NF + valor nominal**. Vencimento entra só como **desempate (FIFO)**,
+  pois diverge entre boleto e CR em ~50% (CR guarda o original; boleto o efetivo/renegociado).
+- Só preenche linha com `PAGO?` em branco (não sobrescreve trabalho manual).
+- NFs cuja soma não fecha → status **divergente** (revisar: parcela faltando, centavos,
+  renegociação). Caso de boletos idênticos (mesmo valor e data) → **ambíguo**, revisão manual.
+- Comando `/preencher-cr` · CLI `financeiro.cli preencher` (gera CSV opcional).
+
 ### Recomendações operacionais
 - Use OFX e consultaCBR do **mesmo período** (mês fechado) para conciliação limpa.
 - Boletos liquidados via PIX caem como crédito PIX avulso (tratados em bucket separado).

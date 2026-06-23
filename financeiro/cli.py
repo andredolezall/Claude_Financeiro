@@ -13,7 +13,7 @@ import argparse
 import sys
 
 from . import boletos as mod_boletos
-from . import conciliacao, fluxo_caixa
+from . import conciliacao, fluxo_caixa, preenchimento
 from .ofx import parse_ofx
 
 
@@ -43,6 +43,15 @@ def _cmd_boletos(args: argparse.Namespace) -> int:
     return 0
 
 
+def _cmd_preencher(args: argparse.Namespace) -> int:
+    resumo = preenchimento.carregar_e_conciliar(args.planilha, args.boletos, aba=args.aba)
+    print(preenchimento.relatorio_texto(resumo))
+    if args.saida:
+        n = preenchimento.escrever_csv_preenchimento(resumo, args.saida)
+        print(f"\n{n} linha(s) gravada(s) em {args.saida}")
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="financeiro", description="Toolkit financeiro")
     sub = parser.add_subparsers(dest="comando", required=True)
@@ -63,6 +72,13 @@ def main(argv: list[str] | None = None) -> int:
     p_bol.add_argument("--boletos", required=True, help="Relatório de cobrança do BB (.xls/.xlsx)")
     p_bol.add_argument("--janela", type=int, default=1, help="Janela de dias para casar (default 1)")
     p_bol.set_defaults(func=_cmd_boletos)
+
+    p_pre = sub.add_parser("preencher", help="Concilia CR × boletos por NF e gera a tabela de preenchimento")
+    p_pre.add_argument("--planilha", required=True, help="Planilha de Fluxo de Caixa (.xlsx)")
+    p_pre.add_argument("--boletos", required=True, help="Relatório consultaCBR do BB (.xls/.xlsx)")
+    p_pre.add_argument("--aba", default="CR - Contas a Receber", help="Aba da CR")
+    p_pre.add_argument("--saida", help="CSV com as linhas a preencher (opcional)")
+    p_pre.set_defaults(func=_cmd_preencher)
 
     args = parser.parse_args(argv)
     return args.func(args)

@@ -89,6 +89,39 @@ def test_boletos_lotes():
     assert cobr.desconto == Decimal("0")
 
 
+def test_conciliacao_por_nf():
+    from datetime import date as D
+    from financeiro import preenchimento as P
+    from financeiro.boletos import Boleto
+    from financeiro.conciliacao import Titulo
+
+    def cr(nf, val, venc, pago=False):
+        return Titulo("receber", venc, Decimal(val), "Cli", nf, cliente="Cli", pago=pago)
+
+    def bol(nf, val, d):
+        return Boleto("Cli", "cnpj", nf, "NN", None, "Liquidado", d,
+                      Decimal(val), Decimal(val), "Via Compe")
+
+    # caso do usuário: 2 PVs na CR -> 1 boleto pela NF inteira
+    r = P.conciliar_por_nf(
+        [cr("108000", "250.00", D(2026, 6, 10)), cr("108000", "750.00", D(2026, 6, 10))],
+        [bol("108000", "1000.00", D(2026, 6, 12))],
+    )
+    assert r.nfs[0].status == "conciliado"
+    assert len(r.a_preencher) == 2
+    assert all(l.preencher and l.data_recebimento == D(2026, 6, 12) for l in r.a_preencher)
+
+    # já pago não é sobrescrito
+    r2 = P.conciliar_por_nf([cr("200", "100.00", D(2026, 6, 1), pago=True)],
+                            [bol("200", "100.00", D(2026, 6, 2))])
+    assert r2.a_preencher == []
+
+    # soma diverge -> divergente, não preenche
+    r3 = P.conciliar_por_nf([cr("300", "100.00", D(2026, 6, 1))],
+                            [bol("300", "90.00", D(2026, 6, 2))])
+    assert r3.nfs[0].status == "divergente" and r3.a_preencher == []
+
+
 def _run_all():
     falhas = 0
     for nome, fn in sorted(globals().items()):
