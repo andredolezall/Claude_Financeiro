@@ -47,8 +47,8 @@ def _cmd_preencher(args: argparse.Namespace) -> int:
     resumo = preenchimento.carregar_e_conciliar(args.planilha, args.boletos, aba=args.aba)
     print(preenchimento.relatorio_texto(resumo))
     if args.saida:
-        n = preenchimento.escrever_csv_preenchimento(resumo, args.saida)
-        print(f"\n{n} linha(s) gravada(s) em {args.saida}")
+        n = preenchimento.escrever_csv_completo(resumo, args.saida)
+        print(f"\n{n} linha(s) acionável(is) gravada(s) em {args.saida} (PREENCHER + DECIDIR)")
     return 0
 
 

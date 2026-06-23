@@ -169,6 +169,45 @@ def escrever_csv_preenchimento(resumo: Resumo, caminho: str) -> int:
     return len(linhas)
 
 
+def escrever_csv_completo(resumo: Resumo, caminho: str,
+                          incluir_ja_pago: bool = False,
+                          incluir_sem_boleto: bool = False) -> int:
+    """Escreve TUDO que é acionável: linhas a PREENCHER e NFs a DECIDIR (divergentes/
+    ambíguas), com o comparativo de soma por NF. As 'DECIDIR' aparecem primeiro.
+    """
+    import csv
+    prioridade = {"DECIDIR": 0, "PREENCHER": 1, "": 2}
+    registros = []
+    for nf in resumo.nfs:
+        dif = nf.soma_cr - nf.soma_boletos
+        for l in nf.linhas:
+            if l.status == "ja_pago" and not incluir_ja_pago:
+                continue
+            if l.status == "sem_boleto" and not incluir_sem_boleto:
+                continue
+            if l.preencher:
+                acao = "PREENCHER"
+            elif l.status in ("divergente", "ambiguo"):
+                acao = "DECIDIR"
+            else:
+                acao = ""
+            venc = l.vencimento.strftime("%d/%m/%Y") if l.vencimento else ""
+            data = l.data_recebimento.strftime("%d/%m/%Y") if l.data_recebimento else ""
+            registros.append((prioridade.get(acao, 3), l.nf, [
+                acao, l.status, l.nf, l.cliente, f"{l.valor:.2f}", venc,
+                "S" if l.preencher else "", data,
+                f"{nf.soma_cr:.2f}", f"{nf.soma_boletos:.2f}", f"{dif:.2f}",
+            ]))
+    registros.sort(key=lambda r: (r[0], r[1]))
+    with open(caminho, "w", encoding="utf-8-sig", newline="") as f:
+        w = csv.writer(f, delimiter=";")
+        w.writerow(["AÇÃO", "STATUS", "NF", "CLIENTE", "VALOR NOMINAL", "VENCIMENTO",
+                    "PAGO?", "DATA RECEBIMENTO", "SOMA CR (NF)", "SOMA BOLETOS (NF)", "DIFERENÇA"])
+        for _, _, linha in registros:
+            w.writerow(linha)
+    return len(registros)
+
+
 def relatorio_texto(resumo: Resumo) -> str:
     st = resumo.por_status_nf()
     linhas_fill = resumo.a_preencher
