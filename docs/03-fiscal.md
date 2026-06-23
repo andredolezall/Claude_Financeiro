@@ -1,8 +1,12 @@
 # 03 — Fiscal (prioridade)
 
 Departamento `FIS`. Foco imediato: **emissão de notas** (peso igual ao Financeiro).
-⚠️ Calendário e obrigações dependem do **regime tributário (D3)** e do **tipo de NF (D4)**.
-Este mapa cobre os dois cenários e marca o que muda.
+
+**Contexto travado (D2–D4):** indústria, ERP **MaxiProd**, **Lucro Presumido**,
+emissão de **NF-e (produto)**. Logo o eixo fiscal é: ICMS (apuração própria),
+PIS/COFINS cumulativo, IRPJ/CSLL trimestral por presunção, SPED Fiscal e
+EFD-Contribuições. (IPI só se a empresa for industrial equiparada/contribuinte de IPI —
+**a confirmar** conforme o NCM dos produtos.)
 
 ---
 

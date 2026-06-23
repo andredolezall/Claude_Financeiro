@@ -48,13 +48,15 @@ Abordagem recomendada: **Claude Code-cêntrico com utilitários Python sob deman
 
 ### Decisões em aberto (suas)
 
-| # | Decisão | Opções | Status |
-|---|---------|--------|--------|
-| D1 | Confirmar abordagem Claude Code-cêntrica | sim / app Python / Notion-cêntrico | **a confirmar** |
-| D2 | Qual ERP/contábil exatamente | (informar) | **a informar** |
-| D3 | Regime tributário | Lucro Presumido / Real / Simples | **a informar** |
-| D4 | Tipo de NF emitida | NF-e (produto) / NFS-e (serviço) / ambos | **a informar** |
-| D5 | Banco(s) PJ e se há API/Open Finance | (informar) | **a informar** |
+| # | Decisão | Definição | Status |
+|---|---------|-----------|--------|
+| D1 | Abordagem do sistema | **Claude Code-cêntrica + utilitários Python sob demanda** | ✅ confirmado |
+| D2 | ERP | **MaxiProd** (ERP industrial — PCP/produção). Empresa é indústria. | ✅ confirmado |
+| D3 | Regime tributário | **Lucro Presumido** (IRPJ/CSLL trimestral; PIS/COFINS cumulativo) | ✅ confirmado |
+| D4 | Tipo de NF | **NF-e (produto)** → ICMS, SPED Fiscal, EFD-Contribuições | ✅ confirmado |
+| D5 | Banco PJ | Sem API; **extração de OFX** disponível → conciliação via OFX | ✅ confirmado |
+| D6 | RH interno × terceirizado | a definir | ⏳ aberto |
+| D7 | Mestre da ontologia (repo × Notion) | recomendação: **repo como mestre** | ⏳ a confirmar |
 
 ## Princípios de design
 

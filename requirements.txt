@@ -1,0 +1,6 @@
+# O toolkit financeiro (financeiro/) usa apenas a biblioteca padrão do Python 3.11+.
+# Nenhuma dependência é necessária para OFX, fluxo de caixa e conciliação.
+
+# Opcional — apenas para a sincronização com o Notion (financeiro/notion_sync.py),
+# que também funciona só com a stdlib via urllib. Descomente se preferir 'requests':
+# requests>=2.31

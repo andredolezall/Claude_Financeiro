@@ -4,7 +4,8 @@ Motor de automação e documentação para operar **Financeiro, Controladoria, F
 de uma empresa de ~R$ 10M/ano de faturamento com **uma única pessoa**, eliminando trabalho
 manual e tarefas repetitivas.
 
-> Estado atual: **fundação** (terra arrasada → estrutura). Nada de produção ainda.
+> Estado atual: **fundação + primeira automação rodando** (OFX → fluxo de caixa e
+> conciliação). Contexto: indústria, ERP MaxiProd, Lucro Presumido, NF-e produto.
 
 ## A ideia em uma frase
 
@@ -26,12 +27,33 @@ Claude_Financeiro/
 │   ├── 05-rh.md                    ← esboço
 │   ├── 06-notion-estrutura.md      ← bancos de dados do Notion + integração
 │   └── 07-roadmap.md               ← por onde começar, em ondas
+├── financeiro/                     ← toolkit Python (stdlib, sem dependências)
+│   ├── ofx.py                      ← parser de extrato OFX (v1 SGML e v2 XML)
+│   ├── categorias.py               ← categorização por palavras-chave
+│   ├── fluxo_caixa.py              ← posição de caixa + resumo do movimento
+│   ├── conciliacao.py              ← extrato × títulos (CSV MaxiProd)
+│   └── cli.py                      ← `python -m financeiro.cli ...`
+├── data/exemplos/                  ← OFX e CSV de exemplo (para testar)
+├── tests/                          ← testes (python tests/test_financeiro.py)
 ├── bases-de-conhecimento/          ← onde você cola/exporta o conteúdo dos chats
-│   ├── README.md
-│   └── _template-base.md
-└── .claude/
-    └── commands/                   ← os "poucos comandos" (specs iniciais)
+└── .claude/commands/               ← os "poucos comandos" (/conciliar, /fluxo-caixa)
 ```
+
+## Como rodar (já funciona, sem instalar nada)
+
+```bash
+# Posição de caixa e fluxo a partir de um extrato OFX:
+python3 -m financeiro.cli fluxo data/exemplos/extrato-exemplo.ofx
+
+# Conciliação extrato × títulos (CSV exportado do MaxiProd):
+python3 -m financeiro.cli conciliar --titulos data/exemplos/titulos-exemplo.csv \
+    data/exemplos/extrato-exemplo.ofx
+
+# Testes:
+python3 tests/test_financeiro.py
+```
+
+No Claude Code, os mesmos fluxos viram os comandos **`/fluxo-caixa`** e **`/conciliar`**.
 
 ## Próximos passos
 

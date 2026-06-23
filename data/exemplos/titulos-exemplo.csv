@@ -1,0 +1,6 @@
+tipo;data_vencimento;valor;descricao;documento
+receber;2026-06-02;12500,00;NF 1023 Cliente ABC;1023
+pagar;2026-06-03;3200,50;Fornecedor XYZ NF 558;558
+receber;2026-06-16;7800,00;NF 1024 Cliente DEF;1024
+pagar;2026-06-20;22000,00;Folha salarios junho;FOLHA-06
+receber;2026-06-25;5000,00;NF 1025 Cliente GHI;1025

@@ -8,7 +8,8 @@ entrega algo usável e só adiciona técnica quando uma rotina vira gargalo.
 - [x] Mapa de Pilares/Processos/Microprocessos — Financeiro e Fiscal detalhados.
 - [x] Esboço de Controladoria e RH.
 - [x] Estrutura do Notion definida (`docs/06`).
-- [ ] **Você:** revisar e confirmar decisões D1–D7.
+- [x] Decisões D1–D5 confirmadas (Claude Code-cêntrico, MaxiProd, Lucro Presumido, NF-e produto, OFX).
+- [ ] **Você:** confirmar D6 (RH interno × terceiro) e D7 (mestre da ontologia).
 - [ ] **Você:** colar as bases de conhecimento em `bases-de-conhecimento/`.
 
 ## Onda 1 — Documentação viva no Notion
@@ -18,13 +19,12 @@ entrega algo usável e só adiciona técnica quando uma rotina vira gargalo.
 - **Resultado:** operação inteira navegável e padronizada no Notion.
 
 ## Onda 2 — Primeiros comandos (maior dor: conciliação e emissão)
-Candidatos a primeiro comando, por ROI:
-1. **`/conciliar`** — concilia extrato bancário × títulos (FIN-TES-002, FIN-CAR-003).
-2. **`/fluxo-caixa`** — posição de caixa + projeção D+30/D+90 (FIN-TES-003/004).
-3. **`/faturar`** — checklist + preparo de emissão de NF (FIS-EMI-001→004).
-4. **`/checklist-fiscal`** — obrigações do mês a partir do calendário (FIS-OBR-001/008).
-- Começam como **Assistido** (Claude prepara, você confere) e sobem para Automatizado.
-- **Resultado:** as duas maiores dores de tempo (financeiro + emissão) encurtadas.
+1. [x] **`/fluxo-caixa`** — posição de caixa + resumo categorizado (FIN-TES-002/003). ✅ rodando
+2. [x] **`/conciliar`** — concilia extrato OFX × títulos MaxiProd (FIN-TES-002, FIN-CAR-003). ✅ rodando
+3. [ ] **`/faturar`** — checklist + preparo de emissão de NF-e (FIS-EMI-001→004).
+4. [ ] **`/checklist-fiscal`** — obrigações do mês a partir do calendário (FIS-OBR-001/008).
+- Próximo passo do `/fluxo-caixa`: projeção D+30/D+90 usando os títulos em aberto.
+- **Resultado parcial:** conciliação e posição de caixa já saem de um arquivo OFX em segundos.
 
 ## Onda 3 — Integrações de dados
 - [ ] Conector de extratos bancários (OFX/API/Open Finance — depende de D5).

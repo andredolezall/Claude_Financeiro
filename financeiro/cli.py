@@ -1,0 +1,53 @@
+"""Interface de linha de comando do toolkit financeiro.
+
+Uso:
+    python -m financeiro.cli fluxo   EXTRATO.ofx [EXTRATO2.ofx ...]
+    python -m financeiro.cli conciliar  --titulos titulos.csv  EXTRATO.ofx [...]
+
+É a camada que os comandos do Claude Code (/fluxo-caixa, /conciliar) chamam.
+"""
+
+from __future__ import annotations
+
+import argparse
+import sys
+
+from . import conciliacao, fluxo_caixa
+from .ofx import parse_ofx
+
+
+def _cmd_fluxo(args: argparse.Namespace) -> int:
+    extratos = [parse_ofx(c) for c in args.extratos]
+    resumo = fluxo_caixa.resumir(extratos)
+    print(fluxo_caixa.relatorio_texto(resumo))
+    return 0
+
+
+def _cmd_conciliar(args: argparse.Namespace) -> int:
+    extratos = [parse_ofx(c) for c in args.extratos]
+    titulos = conciliacao.carregar_titulos(args.titulos)
+    resultado = conciliacao.conciliar(extratos, titulos, janela_dias=args.janela)
+    print(conciliacao.relatorio_texto(resultado))
+    return 0
+
+
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(prog="financeiro", description="Toolkit financeiro")
+    sub = parser.add_subparsers(dest="comando", required=True)
+
+    p_fluxo = sub.add_parser("fluxo", help="Posição de caixa e fluxo a partir de OFX")
+    p_fluxo.add_argument("extratos", nargs="+", help="Arquivos .ofx")
+    p_fluxo.set_defaults(func=_cmd_fluxo)
+
+    p_conc = sub.add_parser("conciliar", help="Concilia extrato OFX com títulos CSV")
+    p_conc.add_argument("extratos", nargs="+", help="Arquivos .ofx")
+    p_conc.add_argument("--titulos", required=True, help="CSV de títulos (MaxiProd)")
+    p_conc.add_argument("--janela", type=int, default=3, help="Janela de dias para casar (default 3)")
+    p_conc.set_defaults(func=_cmd_conciliar)
+
+    args = parser.parse_args(argv)
+    return args.func(args)
+
+
+if __name__ == "__main__":
+    sys.exit(main())

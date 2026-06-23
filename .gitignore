@@ -12,6 +12,9 @@
 /dados/
 /extratos/
 *.ofx
+# ...exceto os exemplos versionados (necessários para os testes)
+!data/exemplos/
+!data/exemplos/*.ofx
 
 # Python
 __pycache__/
