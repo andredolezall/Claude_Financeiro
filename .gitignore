@@ -1,0 +1,25 @@
+# Segredos — NUNCA versionar
+.env
+*.env
+.claude/notion.config.local.json
+*token*
+*secret*
+*.pem
+*.pfx
+*.p12          # certificado digital A1
+
+# Dados sensíveis de operação (avaliar caso a caso)
+/dados/
+/extratos/
+*.ofx
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# SO / editor
+.DS_Store
+.idea/
+.vscode/
