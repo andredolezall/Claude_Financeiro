@@ -11,6 +11,7 @@ Os "poucos comandos" que executam as rotinas. Cada arquivo `*.md` aqui vira um c
 | `/conciliar` | ✅ ativo | FIN-TES-002, FIN-CAR-003 | Concilia extrato OFX × títulos (planilha CR/CP) e aponta divergências |
 | `/conciliar-boletos` | ✅ ativo | FIN-CAR-003 | Concilia lotes de boleto (consultaCBR do BB) com créditos COBRANÇA do OFX |
 | `/preencher-cr` | ✅ ativo | FIN-CAR-003/004 | Concilia CR × boletos por NF e gera o preenchimento (PAGO?/data) |
+| `/baixar-cp` | ✅ ativo | FIN-CAP-005/008 | Sugere baixa do Contas a Pagar cruzando CP × débitos do OFX |
 | `/sync-notion` | ⏳ próximo | — | Sincroniza a ontologia do repo (docs/02–05) com os databases do Notion |
 | `/faturar` | 🗒️ planejado | FIS-EMI-001→004 | Checklist e preparo da emissão de NF-e |
 | `/checklist-fiscal` | 🗒️ planejado | FIS-OBR-001/008 | Gera o checklist de obrigações do mês |

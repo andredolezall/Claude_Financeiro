@@ -95,6 +95,14 @@ no mesmo dia), adotamos **DATA RECEBIMENTO = Data Situação do boleto** — con
 correta para DRE Caixa/PMR e sem depender do OFX. Teste maio: 177 NFs conciliadas, 194
 linhas a preencher (R$ 309.318,16), 7 divergentes.
 
+### Contas a Pagar — sugestão de baixa (baixa_cp.py)
+CP não tem chave (NF) nem relatório-ponte; a confirmação é o débito no OFX, e só para o
+que passa pelo banco. Por isso é **assistido** (SUGERIDO × CONFERIR), não automático.
+Teste junho (523 títulos pagos): **153 SUGERIDO** com data **153/153 igual** ao lançamento
+manual; 370 CONFERIR — 161 sem débito (outra conta?), 132 cartão/dinheiro/folha (não
+passam no extrato), 73 valor repetido. Pontes que faltam: relatório de pagamentos do BB
+(boletos) e **fatura do cartão** (resolve os ~78 de cartão). Comando `/baixar-cp`.
+
 ### Recomendações operacionais
 - Use OFX e consultaCBR do **mesmo período** (mês fechado) para conciliação limpa.
 - Boletos liquidados via PIX caem como crédito PIX avulso (tratados em bucket separado).

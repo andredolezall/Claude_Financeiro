@@ -122,6 +122,32 @@ def test_conciliacao_por_nf():
     assert r3.nfs[0].status == "divergente" and r3.a_preencher == []
 
 
+def test_baixa_cp():
+    from datetime import date as D
+    from financeiro import baixa_cp as B
+    from financeiro.conciliacao import Titulo
+    from financeiro.ofx import Extrato, Transacao
+
+    def cp(forn, val, venc, dpgto, forma):
+        return Titulo("pagar", venc, Decimal(val), forn, "Classe", cliente=forn,
+                      data_recebimento=dpgto, pago=True, forma_pgto=forma)
+
+    titulos = [
+        cp("Fornecedor A", "150.00", D(2026, 6, 10), D(2026, 6, 12), "Boleto"),   # único -> SUGERIDO
+        cp("Loja X", "99.00", D(2026, 6, 5), D(2026, 6, 5), "Cartão de Crédito"), # cartão -> CONFERIR
+        cp("Fornecedor B", "200.00", D(2026, 6, 1), D(2026, 6, 1), "Pix"),        # sem débito -> CONFERIR
+    ]
+    ext = Extrato("001", "1-1", "CHECKING", "BRL", None, None, [
+        Transacao(D(2026, 6, 12), Decimal("-150.00"), "DEBIT", "PAG FORNECEDOR A", "d1"),
+        Transacao(D(2026, 6, 3), Decimal("-500.00"), "DEBIT", "OUTRO", "d2"),
+    ])
+    res = B.sugerir_baixa_cp(titulos, [ext])
+    assert len(res.sugeridos) == 1
+    assert res.sugeridos[0].fornecedor == "Fornecedor A"
+    assert res.sugeridos[0].data_pgto == D(2026, 6, 12)
+    assert len(res.conferir) == 2
+
+
 def _run_all():
     falhas = 0
     for nome, fn in sorted(globals().items()):

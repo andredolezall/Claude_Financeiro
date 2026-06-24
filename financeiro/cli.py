@@ -12,6 +12,7 @@ from __future__ import annotations
 import argparse
 import sys
 
+from . import baixa_cp
 from . import boletos as mod_boletos
 from . import conciliacao, fluxo_caixa, preenchimento
 from .ofx import parse_ofx
@@ -52,6 +53,16 @@ def _cmd_preencher(args: argparse.Namespace) -> int:
     return 0
 
 
+def _cmd_baixar_cp(args: argparse.Namespace) -> int:
+    res = baixa_cp.carregar_e_sugerir(args.planilha, args.extratos, aba=args.aba,
+                                      janela_dias=args.janela)
+    print(baixa_cp.relatorio_texto(res))
+    if args.saida:
+        n = baixa_cp.escrever_csv(res, args.saida)
+        print(f"\n{n} linha(s) gravada(s) em {args.saida} (SUGERIDO + CONFERIR)")
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="financeiro", description="Toolkit financeiro")
     sub = parser.add_subparsers(dest="comando", required=True)
@@ -79,6 +90,14 @@ def main(argv: list[str] | None = None) -> int:
     p_pre.add_argument("--aba", default="CR - Contas a Receber", help="Aba da CR")
     p_pre.add_argument("--saida", help="CSV com as linhas a preencher (opcional)")
     p_pre.set_defaults(func=_cmd_preencher)
+
+    p_bcp = sub.add_parser("baixar-cp", help="Sugere baixa de Contas a Pagar cruzando CP × OFX")
+    p_bcp.add_argument("extratos", nargs="+", help="Arquivos .ofx")
+    p_bcp.add_argument("--planilha", required=True, help="Planilha de Fluxo de Caixa (.xlsx)")
+    p_bcp.add_argument("--aba", default="CP - Contas a Pagar", help="Aba do CP")
+    p_bcp.add_argument("--janela", type=int, default=3, help="Janela de dias (default 3)")
+    p_bcp.add_argument("--saida", help="CSV com SUGERIDO + CONFERIR (opcional)")
+    p_bcp.set_defaults(func=_cmd_baixar_cp)
 
     args = parser.parse_args(argv)
     return args.func(args)
