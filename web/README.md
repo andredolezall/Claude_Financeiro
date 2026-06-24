@@ -24,7 +24,7 @@ sem depender de chat. Roda **100% no navegador** — nenhum arquivo é enviado a
 ## Próximo passo (escrita na planilha)
 O CSV baixado é a entrada para o **Office Script** (Power Automate), que grava `PAGO?` e
 `DATA RECEBIMENTO` na CR do OneDrive **preservando pivôs/DRE**. Ver `docs/09-office-script.md`
-(a construir).
+e `office-script/PreencherCR.ts`.
 
 ## Para validar o motor offline (Node)
 ```
