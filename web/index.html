@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Conciliador CR × Boletos</title>
+<style>
+  :root { --bg:#0f172a; --card:#1e293b; --line:#334155; --ok:#22c55e; --warn:#f59e0b; --txt:#e2e8f0; --mut:#94a3b8; }
+  * { box-sizing: border-box; }
+  body { margin:0; font:15px/1.5 system-ui,Segoe UI,Roboto,sans-serif; background:var(--bg); color:var(--txt); }
+  .wrap { max-width:1100px; margin:0 auto; padding:24px; }
+  h1 { font-size:20px; margin:0 0 4px; }
+  .sub { color:var(--mut); margin:0 0 20px; font-size:13px; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:18px; margin-bottom:16px; }
+  .grid { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+  label.f { display:block; font-size:13px; color:var(--mut); margin-bottom:6px; }
+  input[type=file] { width:100%; color:var(--txt); }
+  button { background:#2563eb; color:#fff; border:0; border-radius:8px; padding:10px 18px; font-size:15px; cursor:pointer; }
+  button:disabled { background:#475569; cursor:not-allowed; }
+  button.ghost { background:transparent; border:1px solid var(--line); }
+  .stats { display:flex; gap:18px; flex-wrap:wrap; margin:6px 0 0; }
+  .stat { background:#0b1220; border:1px solid var(--line); border-radius:10px; padding:10px 14px; min-width:120px; }
+  .stat b { font-size:22px; display:block; }
+  .muted { color:var(--mut); font-size:12px; }
+  table { width:100%; border-collapse:collapse; font-size:13px; }
+  th,td { text-align:left; padding:7px 9px; border-bottom:1px solid var(--line); white-space:nowrap; }
+  th { color:var(--mut); position:sticky; top:0; background:var(--card); }
+  .tbl-wrap { max-height:460px; overflow:auto; border:1px solid var(--line); border-radius:10px; }
+  .pill { padding:2px 8px; border-radius:999px; font-size:11px; font-weight:600; }
+  .PREENCHER { background:rgba(34,197,94,.15); color:var(--ok); }
+  .DECIDIR { background:rgba(245,158,11,.15); color:var(--warn); }
+  .right { text-align:right; }
+  .err { color:#f87171; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Conciliador — Contas a Receber × Boletos</h1>
+  <p class="sub">Tudo roda no seu navegador. Nenhum arquivo é enviado para servidor algum.</p>
+
+  <div class="card">
+    <div class="grid">
+      <div>
+        <label class="f">1) Relatório de boletos do BB (consultaCBR — .xls ou .xlsx)</label>
+        <input type="file" id="boletos" accept=".xls,.xlsx" />
+      </div>
+      <div>
+        <label class="f">2) Planilha de Fluxo de Caixa (.xlsx) — usa a aba CR</label>
+        <input type="file" id="planilha" accept=".xlsx" />
+      </div>
+    </div>
+    <div style="margin-top:14px; display:flex; gap:10px; align-items:center;">
+      <button id="run" disabled>Conciliar</button>
+      <button id="dl" class="ghost" disabled>Baixar CSV (PREENCHER + DECIDIR)</button>
+      <span id="msg" class="muted"></span>
+    </div>
+  </div>
+
+  <div class="card" id="result" style="display:none;">
+    <div class="stats" id="stats"></div>
+    <h3 style="margin:18px 0 8px; font-size:15px;">Itens acionáveis <span class="muted">(DECIDIR primeiro)</span></h3>
+    <div class="tbl-wrap"><table id="tbl"><thead></thead><tbody></tbody></table></div>
+  </div>
+</div>
+
+<script src="https://unpkg.com/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="engine.js"></script>
+<script>
+  var E = window.ConciliadorEngine;
+  var files = { boletos:null, planilha:null }, lastResult=null, lastCSV="";
+  var $ = function(id){ return document.getElementById(id); };
+
+  function setMsg(t, err){ $("msg").textContent=t||""; $("msg").className = "muted"+(err?" err":""); }
+  function ready(){ $("run").disabled = !(files.boletos && files.planilha); }
+
+  $("boletos").addEventListener("change", function(e){ files.boletos=e.target.files[0]; ready(); });
+  $("planilha").addEventListener("change", function(e){ files.planilha=e.target.files[0]; ready(); });
+
+  function readRows(file, pickSheet){
+    return new Promise(function(res, rej){
+      var r=new FileReader();
+      r.onerror=function(){ rej(new Error("Falha ao ler "+file.name)); };
+      r.onload=function(ev){
+        try {
+          var wb=XLSX.read(ev.target.result,{type:"array",cellDates:false});
+          var name=pickSheet(wb.SheetNames);
+          res(XLSX.utils.sheet_to_json(wb.Sheets[name], {defval:""}));
+        } catch(err){ rej(err); }
+      };
+      r.readAsArrayBuffer(file);
+    });
+  }
+  var pickCR = function(names){ return names.find(function(n){return /CR\s*-\s*Contas a Receber/i.test(n);}) || names.find(function(n){return /\bCR\b/i.test(n);}) || names[0]; };
+  var pickBol = function(names){ return names.find(function(n){return /boleto|cobran/i.test(n);}) || names[0]; };
+
+  $("run").addEventListener("click", function(){
+    setMsg("Lendo arquivos…");
+    $("run").disabled=true;
+    Promise.all([ readRows(files.boletos, pickBol), readRows(files.planilha, pickCR) ])
+      .then(function(arr){
+        var bol=arr[0], cr=arr[1];
+        var result=E.reconcileCR(cr, bol);
+        lastResult=result; lastCSV=E.csvCompleto(result);
+        render(result);
+        setMsg("");
+        $("dl").disabled=false; $("run").disabled=false;
+      })
+      .catch(function(err){ setMsg(err.message||String(err), true); $("run").disabled=false; });
+  });
+
+  function render(result){
+    var r=result.resumo;
+    $("result").style.display="block";
+    $("stats").innerHTML =
+      stat("NFs conciliadas", r.conciliado, "var(--ok)") +
+      stat("A preencher", r.aPreencher.length, "var(--ok)") +
+      stat("NFs divergentes", r.divergente, "var(--warn)") +
+      stat("Sem boleto", r.semBoleto, "var(--mut)");
+    var head=["AÇÃO","STATUS","NF","CLIENTE","VALOR","VENC","PAGO?","DATA RECEB","SOMA CR","SOMA BOL","DIF"];
+    $("tbl").tHead.innerHTML="<tr>"+head.map(function(h){return "<th>"+h+"</th>";}).join("")+"</tr>";
+    var rows=[];
+    result.nfs.forEach(function(nf){
+      var dif=nf.somaCR-nf.somaBol;
+      nf.linhas.forEach(function(l){
+        if(l.status==="ja_pago"||l.status==="sem_boleto") return;
+        var acao = l.preencher ? "PREENCHER" : (l.status==="divergente"||l.status==="ambiguo" ? "DECIDIR" : "");
+        rows.push({acao:acao, l:l, nf:nf, dif:dif});
+      });
+    });
+    rows.sort(function(a,b){ var p={DECIDIR:0,PREENCHER:1}; return (p[a.acao]||2)-(p[b.acao]||2) || (a.l.nf<b.l.nf?-1:1); });
+    $("tbl").tBodies[0].innerHTML = rows.map(function(x){
+      var l=x.l;
+      return "<tr>"+
+        "<td><span class='pill "+x.acao+"'>"+x.acao+"</span></td>"+
+        "<td class='muted'>"+l.status+"</td>"+
+        "<td>"+l.nf+"</td><td>"+esc(l.cliente)+"</td>"+
+        "<td class='right'>"+E.fmtBRL(l.valor)+"</td>"+
+        "<td>"+E.fmtDate(l.vencimento)+"</td>"+
+        "<td>"+(l.preencher?"S":"")+"</td>"+
+        "<td>"+E.fmtDate(l.dataReceb)+"</td>"+
+        "<td class='right'>"+E.fmtBRL(x.nf.somaCR)+"</td>"+
+        "<td class='right'>"+E.fmtBRL(x.nf.somaBol)+"</td>"+
+        "<td class='right'>"+(x.dif?E.fmtBRL(x.dif):"")+"</td></tr>";
+    }).join("") || "<tr><td colspan='11' class='muted'>Nada a preencher ou decidir.</td></tr>";
+  }
+  function stat(label,val,color){ return "<div class='stat'><b style='color:"+color+"'>"+val+"</b><span class='muted'>"+label+"</span></div>"; }
+  function esc(s){ return String(s).replace(/[&<>]/g,function(c){return({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]);}); }
+
+  $("dl").addEventListener("click", function(){
+    var blob=new Blob(["﻿"+lastCSV], {type:"text/csv;charset=utf-8;"});
+    var a=document.createElement("a"); a.href=URL.createObjectURL(blob);
+    a.download="conciliacao_CR.csv"; a.click(); URL.revokeObjectURL(a.href);
+  });
+</script>
+</body>
+</html>
