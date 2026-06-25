@@ -4,9 +4,22 @@ Front-end da conciliação **Contas a Receber × Boletos**, para dar o start no 
 sem depender de chat. Roda **100% no navegador** — nenhum arquivo é enviado a servidor.
 
 ## Arquivos
-- `index.html` — interface (upload + tabela + download do CSV).
-- `engine.js` — o motor de conciliação por NF, **portado de `financeiro/preenchimento.py`**
-  e validado contra ele nos dados reais (resultados idênticos: 314/18/813/1).
+- `auto.html` — **fluxo autônomo (recomendado):** abre a planilha do OneDrive, concilia,
+  preenche sozinho o que é certo, mostra as divergências para você decidir e **grava na
+  própria planilha preservando pivôs/DRE** (escrita cirúrgica). Use Edge/Chrome.
+- `index.html` — versão simples: upload + tabela + download do CSV (qualquer navegador).
+- `engine.js` — motor de conciliação por NF, **portado de `financeiro/preenchimento.py`**
+  e validado contra ele nos dados reais (idênticos: 314/18/813/1).
+- `xlsxwrite.js` — escrita **cirúrgica** de células no .xlsx (JSZip): edita só a aba CR,
+  mantém pivôs/gráficos/DRE byte a byte (validado: 42 partes frágeis intactas).
+
+## auto.html — como funciona
+1. **Abrir planilha…** (Edge/Chrome pedem permissão de gravação no arquivo do OneDrive;
+   em outros navegadores, cai no modo "baixar o arquivo atualizado").
+2. Suba o **consultaCBR**. Clique **Conciliar**.
+3. O que casou aparece em "Será preenchido"; as divergências em "Sua decisão" (informe a
+   data para incluir). Clique **Aplicar e salvar**.
+4. Abra a planilha e **Atualize** as tabelas dinâmicas (a DRE recalcula ao abrir).
 
 ## Como usar
 1. Abra `index.html` no navegador (duplo clique). Precisa de internet só para carregar a

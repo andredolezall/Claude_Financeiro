@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Conciliação automática — CR</title>
+<style>
+  :root{--bg:#0f172a;--card:#1e293b;--line:#334155;--ok:#22c55e;--warn:#f59e0b;--txt:#e2e8f0;--mut:#94a3b8;}
+  *{box-sizing:border-box;} body{margin:0;font:15px/1.5 system-ui,Segoe UI,Roboto,sans-serif;background:var(--bg);color:var(--txt);}
+  .wrap{max-width:1080px;margin:0 auto;padding:24px;}
+  h1{font-size:20px;margin:0 0 2px;} .sub{color:var(--mut);font-size:13px;margin:0 0 18px;}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:14px;}
+  .step{font-size:12px;color:var(--mut);text-transform:uppercase;letter-spacing:.04em;margin-bottom:8px;}
+  button{background:#2563eb;color:#fff;border:0;border-radius:8px;padding:9px 16px;font-size:14px;cursor:pointer;}
+  button.ghost{background:transparent;border:1px solid var(--line);} button:disabled{background:#475569;cursor:not-allowed;}
+  button.go{background:#16a34a;} .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap;}
+  .stats{display:flex;gap:14px;flex-wrap:wrap;} .stat{background:#0b1220;border:1px solid var(--line);border-radius:10px;padding:8px 14px;min-width:110px;}
+  .stat b{font-size:22px;display:block;} .muted{color:var(--mut);font-size:12px;} .err{color:#f87171;} .good{color:var(--ok);}
+  table{width:100%;border-collapse:collapse;font-size:13px;} th,td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--line);white-space:nowrap;}
+  th{color:var(--mut);position:sticky;top:0;background:var(--card);} .tbl{max-height:300px;overflow:auto;border:1px solid var(--line);border-radius:10px;margin-top:8px;}
+  .pill{padding:2px 8px;border-radius:999px;font-size:11px;font-weight:600;} .PREENCHER{background:rgba(34,197,94,.15);color:var(--ok);} .DECIDIR{background:rgba(245,158,11,.15);color:var(--warn);}
+  .right{text-align:right;} input[type=date]{background:#0b1220;border:1px solid var(--line);color:var(--txt);border-radius:6px;padding:3px 6px;}
+  .filename{font-size:13px;color:var(--ok);}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Conciliação automática — Contas a Receber</h1>
+  <p class="sub">Roda no navegador. Concilia, preenche sozinho o que é certo e grava na planilha preservando pivôs/DRE. Use Edge ou Chrome.</p>
+
+  <div class="card">
+    <div class="step">1 — Planilha (Fluxo de Caixa, no OneDrive)</div>
+    <div class="row">
+      <button id="open">Abrir planilha…</button>
+      <input type="file" id="openFallback" accept=".xlsx" style="display:none" />
+      <span id="xlName" class="filename"></span>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="step">2 — Relatório de boletos do BB (consultaCBR)</div>
+    <div class="row"><input type="file" id="bol" accept=".xls,.xlsx" /></div>
+  </div>
+
+  <div class="card">
+    <div class="row">
+      <button id="run" disabled>Conciliar</button>
+      <span id="msg" class="muted"></span>
+    </div>
+  </div>
+
+  <div class="card" id="out" style="display:none">
+    <div class="stats" id="stats"></div>
+
+    <div id="pblock" style="margin-top:14px">
+      <div class="step">Será preenchido automaticamente</div>
+      <div class="tbl"><table id="pt"><thead></thead><tbody></tbody></table></div>
+    </div>
+
+    <div id="dblock" style="margin-top:16px">
+      <div class="step">Sua decisão (divergências) — informe a data para incluir</div>
+      <div class="tbl"><table id="dt"><thead></thead><tbody></tbody></table></div>
+    </div>
+
+    <div class="row" style="margin-top:14px">
+      <button id="apply" class="go">Aplicar e salvar na planilha</button>
+      <span id="amsg" class="muted"></span>
+    </div>
+  </div>
+</div>
+
+<script src="https://unpkg.com/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="engine.js"></script>
+<script src="xlsxwrite.js"></script>
+<script>
+  var $=function(id){return document.getElementById(id);};
+  var E=window.ConciliadorEngine, W=window.XlsxWrite;
+  var state={handle:null, masterBuf:null, masterName:"", bolRows:null, crName:"", built:null};
+  var hasFS = !!window.showOpenFilePicker;
+
+  function setMsg(el,t,cls){ el.textContent=t||""; el.className=(cls||"muted"); }
+  function ready(){ $("run").disabled = !(state.masterBuf && state.bolRows); }
+  function dateSerial(d){ return d? Math.round((Date.UTC(d.getUTCFullYear(),d.getUTCMonth(),d.getUTCDate())-Date.UTC(1899,11,30))/86400000):null; }
+
+  // ---- passo 1: abrir planilha (File System Access ou fallback) ----
+  $("open").addEventListener("click", async function(){
+    try{
+      if(hasFS){
+        var [h]=await window.showOpenFilePicker({types:[{description:"Excel",accept:{"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet":[".xlsx"]}}]});
+        state.handle=h; var f=await h.getFile(); state.masterBuf=await f.arrayBuffer(); state.masterName=f.name;
+      } else { $("openFallback").click(); return; }
+      $("xlName").textContent="✓ "+state.masterName+(hasFS?" (grava no próprio arquivo)":"");
+      ready();
+    }catch(e){ if(e.name!=="AbortError") setMsg($("msg"),e.message,"err"); }
+  });
+  $("openFallback").addEventListener("change", async function(e){
+    var f=e.target.files[0]; if(!f)return; state.masterBuf=await f.arrayBuffer(); state.masterName=f.name; state.handle=null;
+    $("xlName").textContent="✓ "+state.masterName+" (vai baixar o arquivo atualizado)"; ready();
+  });
+
+  $("bol").addEventListener("change", function(e){
+    var f=e.target.files[0]; if(!f)return;
+    var r=new FileReader(); r.onload=function(ev){
+      var wb=XLSX.read(ev.target.result,{type:"array",cellDates:false});
+      var nm=wb.SheetNames.find(function(n){return /boleto|cobran/i.test(n);})||wb.SheetNames[0];
+      state.bolRows=XLSX.utils.sheet_to_json(wb.Sheets[nm],{defval:""}); ready();
+    }; r.readAsArrayBuffer(f);
+  });
+
+  // ---- monta as edições (mapeia linhas -> células da CR) ----
+  function build(masterBuf, bolRows){
+    var wb=XLSX.read(masterBuf,{type:"array",cellDates:false});
+    var crName=wb.SheetNames.find(function(n){return /CR\s*-\s*Contas a Receber/i.test(n);})||wb.SheetNames.find(function(n){return /\bCR\b/i.test(n);});
+    var ws=wb.Sheets[crName]; var range=XLSX.utils.decode_range(ws["!ref"]);
+    var grid=XLSX.utils.sheet_to_json(ws,{header:1,defval:""});
+    var head=grid[0].map(function(h){return String(h).trim();}); var ix=function(n){return head.indexOf(n);};
+    var cNF=ix("NF"),cVal=ix("VALOR TOTAL"),cPg=ix("PAGO?"),cDt=ix("DATA RECEBIMENTO"),cVe=ix("VENCIMENTO");
+    var colL=function(j){return XLSX.utils.encode_col(range.s.c+j);};
+    var result=E.reconcileCR(XLSX.utils.sheet_to_json(ws,{defval:""}), bolRows);
+    var blanks={};
+    for(var k=1;k<grid.length;k++){ var r=grid[k];
+      if(String(r[cPg]||"").trim().toUpperCase()==="S") continue;
+      var nf=E.normNF(r[cNF]), v=E.cents(r[cVal]); if(!nf||v==null) continue;
+      var key=nf+"|"+v; (blanks[key]=blanks[key]||[]).push({rowNum:range.s.r+1+k, venc:E.cents(r[cVe])||0});
+    }
+    Object.keys(blanks).forEach(function(key){ blanks[key].sort(function(a,b){return a.venc-b.venc;}); });
+    function pop(nf,v){ var f=blanks[nf+"|"+v]; return f&&f.length? f.shift():null; }
+
+    var preencher=[], decidir=[];
+    result.nfs.forEach(function(nf){ nf.linhas.forEach(function(l){ if(!l.preencher) return;
+      var slot=pop(l.nf,l.valor); if(!slot) return;
+      preencher.push({nf:l.nf,cliente:l.cliente,valor:l.valor,venc:l.vencimento,serial:dateSerial(l.dataReceb),
+        pagoRef:colL(cPg)+slot.rowNum, dataRef:colL(cDt)+slot.rowNum});
+    });});
+    result.nfs.forEach(function(nf){ if(nf.status!=="divergente"&&nf.status!=="ambiguo") return;
+      nf.linhas.forEach(function(l){ if(l.status==="ja_pago") return;
+        var slot=pop(l.nf,l.valor);
+        decidir.push({nf:l.nf,cliente:l.cliente,valor:l.valor,venc:l.vencimento,status:l.status,
+          somaCR:nf.somaCR,somaBol:nf.somaBol,
+          pagoRef:slot?colL(cPg)+slot.rowNum:null, dataRef:slot?colL(cDt)+slot.rowNum:null});
+      });
+    });
+    return {result:result, preencher:preencher, decidir:decidir, crName:crName, dateCol:colL(cDt)};
+  }
+
+  $("run").addEventListener("click", function(){
+    setMsg($("msg"),"Conciliando…");
+    try{
+      var b=build(state.masterBuf, state.bolRows); state.built=b; state.crName=b.crName;
+      render(b); setMsg($("msg"),"");
+    }catch(e){ setMsg($("msg"),e.message,"err"); }
+  });
+
+  function render(b){
+    $("out").style.display="block";
+    var r=b.result.resumo;
+    $("stats").innerHTML =
+      stat("Preencher",b.preencher.length,"var(--ok)")+
+      stat("Decidir",b.decidir.length,"var(--warn)")+
+      stat("NFs conciliadas",r.conciliado,"var(--mut)")+
+      stat("Sem boleto",r.semBoleto,"var(--mut)");
+    // tabela preencher
+    $("pt").tHead.innerHTML="<tr><th>NF</th><th>Cliente</th><th>Valor</th><th>Venc</th><th>Data receb.</th></tr>";
+    $("pt").tBodies[0].innerHTML = b.preencher.map(function(p){
+      return "<tr><td>"+p.nf+"</td><td>"+esc(p.cliente)+"</td><td class='right'>"+E.fmtBRL(p.valor)+"</td><td>"+E.fmtDate(p.venc)+"</td><td class='good'>"+serialBR(p.serial)+"</td></tr>";
+    }).join("")||"<tr><td colspan=5 class='muted'>Nada a preencher.</td></tr>";
+    $("pblock").style.display=b.preencher.length?"block":"none";
+    // tabela decidir (com input de data)
+    $("dt").tHead.innerHTML="<tr><th>NF</th><th>Cliente</th><th>Valor</th><th>Soma CR</th><th>Soma boletos</th><th>Dif</th><th>Incluir com data</th></tr>";
+    $("dt").tBodies[0].innerHTML = b.decidir.map(function(d,i){
+      var dif=d.somaCR-d.somaBol;
+      var inp = d.pagoRef? "<input type='date' data-i='"+i+"'>" : "<span class='muted'>sem linha em branco</span>";
+      return "<tr><td>"+d.nf+"</td><td>"+esc(d.cliente)+"</td><td class='right'>"+E.fmtBRL(d.valor)+"</td>"+
+        "<td class='right'>"+E.fmtBRL(d.somaCR)+"</td><td class='right'>"+E.fmtBRL(d.somaBol)+"</td>"+
+        "<td class='right'>"+(dif?E.fmtBRL(dif):"")+"</td><td>"+inp+"</td></tr>";
+    }).join("")||"<tr><td colspan=7 class='muted'>Nenhuma divergência. 🎉</td></tr>";
+    $("dblock").style.display=b.decidir.length?"block":"none";
+  }
+
+  // ---- aplicar e salvar ----
+  $("apply").addEventListener("click", async function(){
+    var b=state.built; if(!b) return;
+    setMsg($("amsg"),"Gravando…");
+    try{
+      var edits=[];
+      b.preencher.forEach(function(p){
+        edits.push({ref:p.pagoRef,type:"inlineStr",value:"S"});
+        edits.push({ref:p.dataRef,type:"number",value:p.serial});
+      });
+      // decididos: inputs de data preenchidos
+      var inputs=$("dt").querySelectorAll("input[type=date]");
+      var nDec=0;
+      inputs.forEach(function(inp){
+        if(!inp.value) return; var d=b.decidir[+inp.dataset.i]; if(!d.pagoRef) return;
+        var p=inp.value.split("-"); var serial=Math.round((Date.UTC(+p[0],+p[1]-1,+p[2])-Date.UTC(1899,11,30))/86400000);
+        edits.push({ref:d.pagoRef,type:"inlineStr",value:"S"});
+        edits.push({ref:d.dataRef,type:"number",value:serial}); nDec++;
+      });
+      if(!edits.length){ setMsg($("amsg"),"Nada para gravar.","err"); return; }
+      var bytes=await W.applyEdits(state.masterBuf, b.crName, edits, b.dateCol);
+      if(state.handle){
+        var w=await state.handle.createWritable(); await w.write(bytes); await w.close();
+        setMsg($("amsg"),"✓ Gravado em "+state.masterName+" — "+(b.preencher.length)+" preenchidas, "+nDec+" decididas. Abra a planilha e Atualize as tabelas dinâmicas.","good");
+      } else {
+        var blob=new Blob([bytes],{type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"});
+        var a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download=state.masterName.replace(/\.xlsx$/,"")+"_conciliado.xlsx"; a.click(); URL.revokeObjectURL(a.href);
+        setMsg($("amsg"),"✓ Arquivo atualizado baixado. Substitua-o no OneDrive.","good");
+      }
+      // recarrega o buffer salvo p/ permitir nova rodada
+      state.masterBuf = bytes.buffer ? bytes.buffer.slice(0) : state.masterBuf;
+    }catch(e){ setMsg($("amsg"),e.message,"err"); }
+  });
+
+  function stat(l,v,c){ return "<div class='stat'><b style='color:"+c+"'>"+v+"</b><span class='muted'>"+l+"</span></div>"; }
+  function esc(s){ return String(s).replace(/[&<>]/g,function(c){return({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]);}); }
+  function serialBR(s){ if(s==null)return""; var d=new Date(Date.UTC(1899,11,30)+s*86400000); return E.fmtDate(d); }
+</script>
+</body>
+</html>
