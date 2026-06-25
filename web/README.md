@@ -4,6 +4,10 @@ Front-end da conciliação **Contas a Receber × Boletos**, para dar o start no 
 sem depender de chat. Roda **100% no navegador** — nenhum arquivo é enviado a servidor.
 
 ## Arquivos
+- `online.html` — **fluxo SÓ ONLINE (planilha fica no OneDrive, você não baixa):** lê o
+  `consultaCBR` e copia os boletos prontos p/ colar na aba `Boletos`; quem concilia e
+  preenche é o Office Script **`ConciliarCR`** dentro do Excel da web. Sem Azure.
+  Passo a passo em `docs/09-office-script.md`.
 - `auto.html` — **fluxo autônomo (recomendado):** abre a planilha do OneDrive, concilia,
   preenche sozinho o que é certo, mostra as divergências para você decidir e **grava na
   própria planilha preservando pivôs/DRE** (escrita cirúrgica). Use Edge/Chrome.

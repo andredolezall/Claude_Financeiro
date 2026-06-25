@@ -6,6 +6,34 @@ Fecha o ciclo: o Conciliador (web/) gera o CSV; o **Office Script `PreencherCR`*
 
 Arquivo do script: `office-script/PreencherCR.ts`.
 
+---
+
+## ⭐ Recomendado p/ arquivo SÓ ONLINE: `ConciliarCR`
+
+Se a planilha fica **só no OneDrive/SharePoint** (você não baixa o arquivo), use o script
+**`ConciliarCR`** (`office-script/ConciliarCR.ts`): ele faz a **conciliação inteira dentro
+do Excel** — lê a CR ao vivo + a aba `Boletos` e preenche tudo. Você só lida com o
+relatório de boletos; a planilha nunca sai da nuvem. **Não precisa de Azure.**
+
+**Fluxo diário (sem baixar a planilha):**
+1. Abra **`web/online.html`**, suba o `consultaCBR`, clique **Copiar boletos p/ Excel**.
+2. No Excel da web: aba **`Boletos`** → célula **A1** → **colar** (Ctrl+V).
+3. **Automatizar → ConciliarCR**. A CR é preenchida; divergências vão p/ `Conciliação Revisar`.
+
+**Instalação (uma vez):**
+1. Faça uma **cópia** da planilha para testar.
+2. Crie uma aba vazia chamada **`Boletos`**.
+3. **Automatizar → Novo Script** → cole todo o `office-script/ConciliarCR.ts` → salve
+   como `ConciliarCR`.
+
+Mesma lógica validada do motor (casa por soma da NF, FIFO por vencimento, nunca sobrescreve
+`S`) — testada no Node contra `engine.js`: resultado idêntico (13/1/1137 NFs, 9 preenchidos).
+
+> O `PreencherCR` abaixo é a **alternativa** quando você prefere conciliar no app web e
+> colar o CSV já decidido (exige ter a CR no app, ou seja, baixar a planilha).
+
+---
+
 ## Pré-requisitos
 - Excel na web (Microsoft 365) com o menu **Automatizar** visível.
 - A planilha no OneDrive com a aba `CR - Contas a Receber` (colunas NF, VALOR TOTAL,

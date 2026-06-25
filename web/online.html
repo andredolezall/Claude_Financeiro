@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Conciliador online — boletos p/ Excel</title>
+<style>
+  :root{--bg:#0f172a;--card:#1e293b;--line:#334155;--ok:#22c55e;--txt:#e2e8f0;--mut:#94a3b8;}
+  *{box-sizing:border-box;} body{margin:0;font:15px/1.5 system-ui,Segoe UI,Roboto,sans-serif;background:var(--bg);color:var(--txt);}
+  .wrap{max-width:900px;margin:0 auto;padding:24px;}
+  h1{font-size:20px;margin:0 0 2px;} .sub{color:var(--mut);font-size:13px;margin:0 0 18px;}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:14px;}
+  .step{font-size:12px;color:var(--mut);text-transform:uppercase;letter-spacing:.04em;margin-bottom:8px;}
+  button{background:#2563eb;color:#fff;border:0;border-radius:8px;padding:9px 16px;font-size:14px;cursor:pointer;}
+  button:disabled{background:#475569;cursor:not-allowed;} button.go{background:#16a34a;}
+  .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap;} .muted{color:var(--mut);font-size:12px;} .good{color:var(--ok);} .err{color:#f87171;}
+  textarea{width:100%;height:120px;background:#0b1220;border:1px solid var(--line);color:var(--txt);border-radius:8px;padding:8px;font:12px ui-monospace,monospace;margin-top:8px;}
+  ol{margin:6px 0 0 18px;padding:0;} li{margin:3px 0;} b.k{color:#fff;}
+  .stat{display:inline-block;background:#0b1220;border:1px solid var(--line);border-radius:10px;padding:6px 12px;}
+  .stat b{font-size:20px;color:var(--ok);}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Conciliador online — preencher a CR no Excel da web</h1>
+  <p class="sub">Você nunca baixa a planilha. Esta página só lê o relatório de boletos; quem concilia e preenche é o script <b class="k">ConciliarCR</b> dentro do Excel online (lê a CR ao vivo).</p>
+
+  <div class="card">
+    <div class="step">1 — Relatório de boletos do BB (consultaCBR)</div>
+    <div class="row"><input type="file" id="bol" accept=".xls,.xlsx" /></div>
+    <div id="info" class="muted" style="margin-top:8px"></div>
+  </div>
+
+  <div class="card" id="out" style="display:none">
+    <div class="step">2 — Copie os boletos</div>
+    <div class="row"><button id="copy" class="go">Copiar boletos p/ Excel</button> <span id="cmsg" class="muted"></span></div>
+    <textarea id="tsv" readonly spellcheck="false"></textarea>
+  </div>
+
+  <div class="card" id="how" style="display:none">
+    <div class="step">3 — No Excel da web</div>
+    <ol>
+      <li>Abra a planilha. Garanta que existe uma aba chamada <b class="k">Boletos</b> (crie se não houver).</li>
+      <li>Clique na célula <b class="k">A1</b> da aba Boletos e <b class="k">cole</b> (Ctrl+V).</li>
+      <li><b class="k">Automatizar → ConciliarCR</b>. Pronto: a CR é preenchida e as divergências vão para a aba <b class="k">Conciliação Revisar</b>.</li>
+    </ol>
+  </div>
+</div>
+
+<script src="https://unpkg.com/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="engine.js"></script>
+<script>
+  var $=function(id){return document.getElementById(id);};
+  var E=window.ConciliadorEngine;
+  var HEAD=["Seu Número","Valor","Valor Liquidação","Data Situação","Situação"];
+
+  function brl(c){ return c==null?"":(c/100).toLocaleString("pt-BR",{minimumFractionDigits:2,maximumFractionDigits:2}); }
+
+  $("bol").addEventListener("change", function(e){
+    var f=e.target.files[0]; if(!f) return;
+    $("info").textContent="Lendo…"; $("info").className="muted";
+    var r=new FileReader();
+    r.onload=function(ev){
+      try{
+        var wb=XLSX.read(ev.target.result,{type:"array",cellDates:false});
+        var nm=wb.SheetNames.find(function(n){return /boleto|cobran/i.test(n);})||wb.SheetNames[0];
+        var rows=XLSX.utils.sheet_to_json(wb.Sheets[nm],{defval:""});
+        var out=[HEAD], usados=0, liquidados=0;
+        rows.forEach(function(raw){
+          var o={}; for(var k in raw) o[String(k).trim()]=raw[k];
+          var nf=E.normNF(o["Seu Número"]); if(!nf) return;
+          var valor=E.cents(o["Valor"]), liq=E.cents(o["Valor Liquidação"]);
+          var data=E.toDate(o["Data Situação"]);
+          out.push([nf, brl(valor), brl(liq), E.fmtDate(data), String(o["Situação"]||"").trim()]);
+          usados++; if(data && liq!=null && liq>0) liquidados++;
+        });
+        if(usados===0){ $("info").textContent="Não encontrei boletos (coluna 'Seu Número'). Confira o arquivo."; $("info").className="err"; return; }
+        var tsv=out.map(function(r){return r.join("\t");}).join("\n");
+        $("tsv").value=tsv;
+        $("info").innerHTML="<span class='stat'><b>"+usados+"</b> boletos</span> &nbsp; <span class='muted'>"+liquidados+" liquidados (serão conciliados)</span>";
+        $("info").className="good"; $("out").style.display="block"; $("how").style.display="block";
+      }catch(err){ $("info").textContent="Erro ao ler: "+err.message; $("info").className="err"; }
+    };
+    r.readAsArrayBuffer(f);
+  });
+
+  $("copy").addEventListener("click", function(){
+    var ta=$("tsv"); ta.focus(); ta.select();
+    function done(){ $("cmsg").textContent="✓ Copiado! Cole na célula A1 da aba Boletos."; $("cmsg").className="good"; }
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(ta.value).then(done, function(){ try{document.execCommand("copy");done();}catch(e){ $("cmsg").textContent="Selecione o texto e copie (Ctrl+C)."; } });
+    } else { try{document.execCommand("copy");done();}catch(e){ $("cmsg").textContent="Selecione o texto e copie (Ctrl+C)."; } }
+  });
+</script>
+</body>
+</html>
