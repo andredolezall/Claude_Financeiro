@@ -15,6 +15,9 @@ Esta plataforma (TypeScript, em `src/`) é a evolução para o produto SaaS da D
 - **DG consultor**: persona versionada (`prompts/dg_consultor.md`) + Constituição + RAG + jornada.
 - **Entitlements por plano** (Starter/Pro/Enterprise) com gating real.
 - **Jornada "Do Diagnóstico ao Lucro"** como máquina de estados por tenant.
+- **Conciliação de recebíveis**: casa entradas com recebíveis em aberto e dá baixa
+  automática (Pro+) — elimina divergências.
+- **Régua de cobrança automática**: lembretes escalonados (antes/no dia/após o vencimento).
 - **Dashboard**: KPIs (entra/sai/sobra, recebíveis, **previsão de caixa**) via API HTTP.
 - **Notificações**: contas a pagar/receber, caixa baixo, **risco de caixa negativo** (proativo).
 - **CRM + agenda inteligente**: pipeline, follow-ups, capacidade × oportunidade, sugestão do DG.
@@ -46,6 +49,7 @@ npm run build && npm start
 #   GET  http://localhost:3000/health
 #   GET  http://localhost:3000/api/tenants/demo_padaria/dashboard
 #   POST http://localhost:3000/api/tenants/demo_padaria/message  {"text":"recebi 350 da Maria pelo pix"}
+#   POST http://localhost:3000/api/tenants/demo_padaria/conciliar  (concilia recebíveis)
 ```
 
 ## Variáveis de ambiente
@@ -69,7 +73,10 @@ src/
 │   ├── entitlements.ts       ← matriz planos × recursos (gating)
 │   ├── journey.ts            ← jornada "Do Diagnóstico ao Lucro" (máquina de estados)
 │   ├── finance.ts            ← KPIs + previsão de caixa
+│   ├── conciliacao.ts        ← casamento receita × recebível (puro)
 │   └── types.ts              ← modelo de domínio multi-tenant
+├── services/conciliacaoService.ts ← aplica baixas no store conforme o plano
+├── notifications/regua.ts    ← régua de cobrança (dunning) escalonada
 ├── dg/
 │   ├── prompt.ts             ← montagem do system prompt do DG
 │   ├── consultant.ts         ← DG consultor (RAG + contexto + gating)

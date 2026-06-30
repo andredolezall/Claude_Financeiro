@@ -11,6 +11,8 @@ import { buildApp } from '../server.js';
 import { handleInbound } from '../pipeline.js';
 import { computeKPIs, projectCash } from '../core/finance.js';
 import { buildAlerts } from '../notifications/engine.js';
+import { cobrancasDoDia } from '../notifications/regua.js';
+import { conciliarTenant } from '../services/conciliacaoService.js';
 import { journeySummary } from '../core/journey.js';
 import { DEMO_TENANT_ID } from './seed.js';
 
@@ -28,7 +30,8 @@ async function main(): Promise<void> {
   const mensagens = [
     'recebi 350 da Maria pelo pix',
     'paguei 600 de energia no boleto',
-    'a Escola Crescer vai me pagar 1500 dia 10',
+    'recebi 1800 do Buffet da Praça pelo pix', // casa com o recebível em aberto (conciliação)
+    'a Escola Crescer vai me pagar 1500 dia 3', // vence 03/07 → régua dispara lembrete hoje (-3)
     'como faço pra melhorar meu caixa esse mês?',
   ];
   for (const text of mensagens) {
@@ -38,8 +41,23 @@ async function main(): Promise<void> {
     if (r.persisted) console.log(`   ↳ persistido: ${r.persisted.tipo}#${r.persisted.id}`);
   }
 
-  sep('3) Dashboard — KPIs, previsão de caixa, alertas e jornada');
-  const now = new Date('2026-06-29T12:00:00Z');
+  const now = new Date('2026-06-30T12:00:00Z');
+
+  sep('3) Conciliação automática de recebíveis (elimina divergências)');
+  const conc = conciliarTenant(deps.store, tenantId, now);
+  console.log(`Modo: ${conc.modo} (plano ${tenant.plano})`);
+  for (const b of conc.baixados) {
+    console.log(` ✅ baixado: ${b.receivable.contraparte} ${b.receivable.valor} (confiança ${b.confidence}) ↔ tx ${b.transaction.id}`);
+  }
+  for (const m of conc.aRevisar) console.log(` 🔎 a revisar: ${m.receivable.contraparte} (${m.confidence})`);
+  console.log(` Recebíveis ainda em aberto: ${conc.result.recebiveisEmAberto.length}`);
+
+  sep('4) Régua de cobrança — mensagens devidas hoje');
+  const cobrancas = cobrancasDoDia(tenant, deps.store.listReceivables(tenantId), now);
+  if (!cobrancas.length) console.log(' (nenhuma cobrança programada para hoje)');
+  for (const c of cobrancas) console.log(` • [${c.tom}] ${c.mensagem}`);
+
+  sep('5) Dashboard — KPIs, previsão de caixa, alertas e jornada');
   const txns = deps.store.listTransactions(tenantId);
   const recs = deps.store.listReceivables(tenantId);
   const pays = deps.store.listPayables(tenantId);

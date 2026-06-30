@@ -19,6 +19,8 @@ import { createClaudeClient, createMockClaudeClient, type ClaudeClient } from '.
 import { handleInbound } from './pipeline.js';
 import { computeKPIs, projectCash } from './core/finance.js';
 import { buildAlerts } from './notifications/engine.js';
+import { cobrancasDoDia } from './notifications/regua.js';
+import { conciliarTenant } from './services/conciliacaoService.js';
 import { journeySummary } from './core/journey.js';
 import { PLANS } from './core/entitlements.js';
 import { loadWhatsAppConfig, verifyWebhook, validateSignature, parseInbound } from './whatsapp/cloudApi.js';
@@ -104,12 +106,30 @@ export function createApp(deps: AppDeps) {
         const kpis = computeKPIs(txns, recs, pays, now);
         const proj = projectCash(kpis.saldoAtual, recs, pays, now, 30);
         const alerts = buildAlerts({ tenant, txns, receivables: recs, payables: pays, now });
+        const cobrancas = cobrancasDoDia(tenant, recs, now);
         return json(res, 200, {
           tenant: { id: tenant.id, nome: tenant.nome, plano: PLANS[tenant.plano].nome },
           kpis,
           previsaoCaixa: { primeiroDiaNegativo: proj.primeiroDiaNegativo, serie: proj.serie },
           jornada: journeySummary(deps.store.getJourney(tenantId)),
           alertas: alerts,
+          cobrancasHoje: cobrancas,
+        });
+      }
+
+      // --- Conciliação de recebíveis (aplica baixas conforme o plano) ---
+      const conc = path.match(/^\/api\/tenants\/([^/]+)\/conciliar$/);
+      if (conc && req.method === 'POST') {
+        const tenantId = decodeURIComponent(conc[1]);
+        const tenant = deps.store.getTenant(tenantId);
+        if (!tenant) return json(res, 404, { error: 'tenant não encontrado' });
+        const out = conciliarTenant(deps.store, tenantId, new Date());
+        return json(res, 200, {
+          modo: out.modo,
+          baixados: out.baixados.map((m) => ({ recebivel: m.receivable.id, contraparte: m.receivable.contraparte, valor: m.receivable.valor, confianca: m.confidence })),
+          aRevisar: out.aRevisar.map((m) => ({ recebivel: m.receivable.id, confianca: m.confidence })),
+          recebiveisEmAberto: out.result.recebiveisEmAberto.length,
+          receitasSemRecebivel: out.result.receitasSemRecebivel.length,
         });
       }
 
