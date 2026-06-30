@@ -47,7 +47,13 @@ hoje com defaults marcados `estimado` (Regra nº 1). Precisam ser calibradas com
 | Custo variável (% do faturamento) | `Tenant.custoVariavelPct` | 0,60 (demo: 0,55) | Levantar o custo variável real por tenant/setor |
 | Capacidade mensal de entrega (R$) | `Tenant.capacidadeMensalInformadaR$` | estimada pela média de receita | Pedir a capacidade real ao dono; a estimativa é só ponto de partida |
 | Fator de custo da terceirização | `FATOR_TERCEIRIZACAO` (viabilizacao.ts) | 0,35 | Validar com cotação real de parceiros do setor |
-| Refinamento da recomendação | — | hoje favorece margem (opção B) | Incluir urgência/prazo do cliente para às vezes recomendar A |
+| Duração de um ciclo de entrega (dias) | `cicloEntregaDias` | 30 | Calibrar por setor (perecível/serviço/produção têm ciclos diferentes) |
+| Perfil de risco | `Tenant.perfilRisco` (senão inferido) | inferido de caixa + histórico | Confirmar com o dono; a inferência é heurística inicial e melhora com o histórico de decisões |
+
+> **Implementado nesta rodada:** o brief agora considera o **prazo de entrega do cliente**
+> (`Lead.prazoEntregaDias`) — opções que estouram o prazo são marcadas inviáveis e nunca
+> recomendadas (consultor resolve, não cria problema) — e o **perfil de risco** muda a
+> recomendação (conservador recusa risco/margem fina; arrojado abraça para crescer).
 
 ## D. Decisões de produto a validar contra margem/COGS
 

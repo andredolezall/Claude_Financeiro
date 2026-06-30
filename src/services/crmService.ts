@@ -20,6 +20,7 @@ export interface NovoLead {
   contato?: string;
   valorPotencial: number;
   ticketMedio?: number;
+  prazoEntregaDias?: number;
   estagio?: LeadStage;
 }
 
@@ -37,6 +38,7 @@ export function criarLead(store: MemoryStore, tenantId: string, dados: NovoLead,
     estagio: dados.estagio ?? 'novo',
     valorPotencial: dados.valorPotencial,
     ticketMedio: dados.ticketMedio,
+    prazoEntregaDias: dados.prazoEntregaDias,
     historico: [{ data: now.toISOString().slice(0, 10), nota: 'Lead criado' }],
     criadoEm: now.toISOString(),
   };

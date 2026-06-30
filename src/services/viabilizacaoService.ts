@@ -16,9 +16,50 @@ import { estimarCapacidadeMensal } from './crmService.js';
 import { runLearningJob, learningsToChunks, type TenantSignal } from '../learning/anonymization.js';
 import { KnowledgeBase } from '../dg/rag.js';
 import { MemoryStore } from '../store/memoryStore.js';
-import type { Lead } from '../core/types.js';
+import type { Lead, PerfilRisco } from '../core/types.js';
 
 const CUSTO_VARIAVEL_PADRAO = 0.6; // premissa default (a calibrar por tenant — Regra nº 1)
+
+export interface PerfilRiscoInferido {
+  perfil: PerfilRisco;
+  motivo: string;
+  origem: 'informado' | 'inferido';
+}
+
+/**
+ * Infere o apetite de risco da empresa a partir do COMPORTAMENTO (dinâmico por cliente):
+ *  - folga de caixa (saldo ÷ saída média mensal): pouca folga → conservador;
+ *  - histórico de decisões: ousadias que deram certo → arrojado; perdas/recusas → conservador.
+ * Se o dono informou tenant.perfilRisco, esse vence.
+ */
+export function inferirPerfilRisco(store: MemoryStore, tenantId: string, now: Date): PerfilRiscoInferido {
+  const tenant = store.getTenant(tenantId);
+  if (!tenant) throw new Error(`Tenant inexistente: ${tenantId}`);
+  if (tenant.perfilRisco) {
+    return { perfil: tenant.perfilRisco, motivo: 'perfil informado pelo dono', origem: 'informado' };
+  }
+  const txns = store.listTransactions(tenantId);
+  const kpis = computeKPIs(txns, store.listReceivables(tenantId), store.listPayables(tenantId), now, 0);
+  const despesas = txns.filter((t) => t.kind === 'despesa');
+  const meses = new Set(despesas.map((t) => t.data.slice(0, 7))).size || 1;
+  const saidaMedia = despesas.reduce((s, t) => s + t.valor, 0) / meses;
+  const folga = saidaMedia > 0 ? kpis.saldoAtual / saidaMedia : kpis.saldoAtual > 0 ? 3 : 0;
+
+  const sinais = store.listSignals(tenantId);
+  const ousadiasOk = sinais.filter((s) => /opção A/.test(s.observacao) && s.funcionou).length;
+  const perdas = sinais.filter((s) => !s.funcionou).length;
+
+  let score = 0;
+  const motivos: string[] = [];
+  if (folga < 1) { score -= 1; motivos.push(`caixa apertado (folga ${folga.toFixed(1)}x a saída média)`); }
+  else if (folga >= 3) { score += 1; motivos.push(`caixa folgado (${folga.toFixed(1)}x a saída média)`); }
+  else motivos.push(`caixa equilibrado (${folga.toFixed(1)}x a saída média)`);
+  if (ousadiasOk > perdas) { score += 1; motivos.push('histórico de ousadias que deram certo'); }
+  else if (perdas > ousadiasOk) { score -= 1; motivos.push('histórico de decisões arriscadas que não converteram'); }
+
+  const perfil: PerfilRisco = score <= -1 ? 'conservador' : score >= 1 ? 'arrojado' : 'equilibrado';
+  return { perfil, motivo: motivos.join('; '), origem: 'inferido' };
+}
 
 function getLead(store: MemoryStore, tenantId: string, leadId: string): Lead {
   const lead = store.listLeads(tenantId).find((l) => l.id === leadId);
@@ -29,6 +70,10 @@ function getLead(store: MemoryStore, tenantId: string, leadId: string): Lead {
 export interface BriefOptions {
   setorTicketMedioR$?: number;
   saldoInicial?: number;
+  /** Sobrescreve o prazo do cliente (dias); senão usa lead.prazoEntregaDias. */
+  prazoEntregaDias?: number;
+  /** Sobrescreve o perfil de risco (senão usa o informado/inferido). */
+  perfilRiscoOverride?: PerfilRisco;
 }
 
 /** Gera o brief de viabilização do DG para uma oportunidade. Exige dg_consultor full. */
@@ -46,13 +91,16 @@ export function gerarBriefViabilizacao(
   const lead = getLead(store, tenantId, leadId);
   const kpis = computeKPIs(store.listTransactions(tenantId), store.listReceivables(tenantId), store.listPayables(tenantId), now, opts?.saldoInicial ?? 0);
   const capacidade = tenant.capacidadeMensalInformadaR$ ?? estimarCapacidadeMensal(store, tenantId);
+  const perfil = opts?.perfilRiscoOverride ?? inferirPerfilRisco(store, tenantId, now).perfil;
 
   return gerarBrief({
     lead,
     capacidadeMensalR$: capacidade,
     saldoAtualR$: kpis.saldoAtual,
     custoVariavelPct: tenant.custoVariavelPct ?? CUSTO_VARIAVEL_PADRAO,
+    perfilRisco: perfil,
     setorTicketMedioR$: opts?.setorTicketMedioR$,
+    prazoEntregaDias: opts?.prazoEntregaDias,
   });
 }
 

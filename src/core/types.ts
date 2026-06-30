@@ -9,6 +9,15 @@ export type PlanKey = 'starter' | 'pro' | 'enterprise';
 
 export type UserRole = 'dono' | 'operador' | 'consultor_dgr';
 
+/**
+ * Apetite de risco da empresa — calibra a recomendação do DG ao decidir atender ou
+ * recusar uma oportunidade. Pode ser informado pelo dono ou inferido do comportamento.
+ *  - conservador: pés no chão, recusa o que ameaça caixa/operação.
+ *  - equilibrado: aceita risco moderado quando a conta fecha.
+ *  - arrojado: abraça o risco para crescer/capturar cliente estratégico.
+ */
+export type PerfilRisco = 'conservador' | 'equilibrado' | 'arrojado';
+
 /** Faixa de porte da PME — calibra o discurso do DG (ver dgr_constitution.ICP). */
 export type RevenueTier = 'micro' | 'pequena' | 'media';
 
@@ -29,6 +38,8 @@ export interface Tenant {
   custoVariavelPct?: number;
   /** Capacidade mensal de entrega informada pelo dono (R$). Se ausente, é estimada. */
   capacidadeMensalInformadaR$?: number;
+  /** Apetite de risco informado pelo dono. Se ausente, o DG infere do comportamento. */
+  perfilRisco?: PerfilRisco;
   criadoEm: string; // ISO date
 }
 
@@ -110,6 +121,8 @@ export interface Lead {
   estagio: LeadStage;
   valorPotencial: number;
   ticketMedio?: number;
+  /** Prazo de entrega exigido pelo cliente (em dias). Torna inviável a opção que não cabe. */
+  prazoEntregaDias?: number;
   historico: { data: string; nota: string }[];
   criadoEm: string;
 }

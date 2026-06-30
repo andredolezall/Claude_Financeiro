@@ -17,7 +17,7 @@ import { gerarDiagnostico, narrarDiagnostico } from '../services/diagnosticoServ
 import { confirmarOrientacao, iniciarExecucao, concluirAcao, medirResultado } from '../services/acompanhamentoService.js';
 import { painelCRM, criarLead } from '../services/crmService.js';
 import { suggestApproach } from '../crm/crm.js';
-import { gerarBriefViabilizacao, registrarDecisao, consolidarAprendizados } from '../services/viabilizacaoService.js';
+import { gerarBriefViabilizacao, registrarDecisao, consolidarAprendizados, inferirPerfilRisco } from '../services/viabilizacaoService.js';
 import { journeySummary } from '../core/journey.js';
 import { DEMO_TENANT_ID } from './seed.js';
 
@@ -107,16 +107,25 @@ async function main(): Promise<void> {
   const ab = await suggestApproach(deps.claude, deps.kb, tenant, deps.store.getJourney(tenantId), lead);
   console.log(`\n🤖 DG — abordagem para "${lead.nome}" (disponível: ${ab.disponivel}):\n${ab.sugestao}`);
 
-  sep('9) Viabilização de oportunidade — o DG estrutura a decisão e devolve ao dono');
-  // Surge uma oportunidade grande, acima da capacidade atual de entrega.
-  const grande = criarLead(deps.store, tenantId, { nome: 'Escola Crescer — contrato anual', valorPotencial: 14000, ticketMedio: 1500 }, now);
+  sep('9) Viabilização de oportunidade — prazo + perfil de risco, decisão do dono');
+  // Oportunidade grande, acima da capacidade, com prazo apertado do cliente (45 dias).
+  const grande = criarLead(deps.store, tenantId, { nome: 'Escola Crescer — contrato anual', valorPotencial: 14000, ticketMedio: 1500, prazoEntregaDias: 45 }, now);
+  const perfilInf = inferirPerfilRisco(deps.store, tenantId, now);
+  console.log(`Perfil de risco (${perfilInf.origem}): ${perfilInf.perfil} — ${perfilInf.motivo}\n`);
   const brief = gerarBriefViabilizacao(deps.store, tenantId, grande.id, now, { setorTicketMedioR$: 1000 });
-  console.log(`🤖 DG:\n${brief.resumoParaWhatsApp}`);
+  console.log(`🤖 DG (perfil ${brief.perfilRisco}):\n${brief.resumoParaWhatsApp}`);
+
+  // Mesma oportunidade, perfil ARROJADO → recomendação muda (dinâmico por cliente).
+  const briefArrojado = gerarBriefViabilizacao(deps.store, tenantId, grande.id, now, { setorTicketMedioR$: 1000, perfilRiscoOverride: 'arrojado' });
+  console.log(`\n— Se a empresa fosse ARROJADA, a recomendação seria: ${briefArrojado.recomendacao?.decisao} (${briefArrojado.recomendacao?.rotulo ?? '—'}).`);
+  console.log(`— Como ${brief.perfilRisco}, foi: ${brief.recomendacao?.decisao} (${brief.recomendacao?.rotulo ?? '—'}).`);
+
   // O dono decide (a decisão é dele) e avisa o DG → fortalece a base.
-  const decisao = registrarDecisao(deps.store, tenantId, grande.id, brief.recomendacao?.opcao ?? 'B', 'ganho', now, 'Vou faseado, fechei o contrato');
+  const escolha = brief.recomendacao?.opcoes[0] ?? 'B';
+  const decisao = registrarDecisao(deps.store, tenantId, grande.id, escolha, 'ganho', now, 'Fechei o contrato');
   console.log(`\n✔️ Decisão do dono registrada (consentimento p/ base agregada: ${decisao.consentido}).`);
   const consol = consolidarAprendizados(deps.store, deps.kb);
-  console.log(`Base de aprendizado: ${consol.sinaisConsiderados} sinal(is) considerado(s), ${consol.padroesPublicados} padrão(ões) publicado(s) (limiar de anonimização protege com N baixo).`);
+  console.log(`Base de aprendizado: ${consol.sinaisConsiderados} sinal(is), ${consol.padroesPublicados} padrão(ões) publicado(s) (limiar protege com N baixo).`);
 }
 
 main().catch((e) => {

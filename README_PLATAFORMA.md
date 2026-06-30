@@ -26,9 +26,10 @@ Esta plataforma (TypeScript, em `src/`) é a evolução para o produto SaaS da D
 - **CRM + agenda inteligente**: pipeline, follow-ups, **capacidade × oportunidade**
   (não gerar demanda que não se entrega), sugestão de abordagem do DG (Enterprise).
 - **Viabilização de oportunidade**: quando não dá para atender, o DG explica o porquê,
-  oferece opções A/B/C, recomenda com fatores, **projeta faturamento/custo/lucro** e o
-  valor estratégico — e **devolve a decisão ao dono**. A decisão fortalece a base
-  anonimizada (consentimento + limiar N≥X).
+  oferece opções A/B/C, **descarta o que não cabe no prazo do cliente**, e recomenda
+  conforme o **perfil de risco** da empresa (conservador recusa; arrojado abraça para
+  crescer) — atender, renegociar prazo ou recusar. Projeta faturamento/custo/lucro e o
+  valor estratégico, e **devolve a decisão ao dono**, que fortalece a base anonimizada.
 - **Aprendizado anonimizado entre tenants** com trava de privacidade (opt-in + scrub PII + N≥X).
 - **Ambiente de demonstração** com uma PME fictícia.
 
