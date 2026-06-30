@@ -15,6 +15,9 @@ Esta plataforma (TypeScript, em `src/`) é a evolução para o produto SaaS da D
 - **DG consultor**: persona versionada (`prompts/dg_consultor.md`) + Constituição + RAG + jornada.
 - **Entitlements por plano** (Starter/Pro/Enterprise) com gating real.
 - **Jornada "Do Diagnóstico ao Lucro"** como máquina de estados por tenant.
+- **Diagnóstico do DG**: detecta e **quantifica em R$/mês** o que drena resultado
+  (atraso, divergência, queima de caixa, risco de caixa negativo), propõe plano e
+  avança a jornada. É o que faz a DGR ser consultoria, não bot.
 - **Conciliação de recebíveis**: casa entradas com recebíveis em aberto e dá baixa
   automática (Pro+) — elimina divergências.
 - **Régua de cobrança automática**: lembretes escalonados (antes/no dia/após o vencimento).
@@ -50,6 +53,7 @@ npm run build && npm start
 #   GET  http://localhost:3000/api/tenants/demo_padaria/dashboard
 #   POST http://localhost:3000/api/tenants/demo_padaria/message  {"text":"recebi 350 da Maria pelo pix"}
 #   POST http://localhost:3000/api/tenants/demo_padaria/conciliar  (concilia recebíveis)
+#   POST http://localhost:3000/api/tenants/demo_padaria/diagnostico  (diagnóstico quantificado)
 ```
 
 ## Variáveis de ambiente
@@ -76,11 +80,13 @@ src/
 │   ├── conciliacao.ts        ← casamento receita × recebível (puro)
 │   └── types.ts              ← modelo de domínio multi-tenant
 ├── services/conciliacaoService.ts ← aplica baixas no store conforme o plano
+├── services/diagnosticoService.ts ← roda diagnóstico, persiste na jornada, propõe plano
 ├── notifications/regua.ts    ← régua de cobrança (dunning) escalonada
 ├── dg/
 │   ├── prompt.ts             ← montagem do system prompt do DG
 │   ├── consultant.ts         ← DG consultor (RAG + contexto + gating)
 │   ├── extraction.ts         ← mensagem → JSON estruturado
+│   ├── diagnostico.ts        ← detectores que quantificam o que drena resultado
 │   ├── rag.ts                ← 2 coleções: curada (citável) × aprendizado anonimizado
 │   ├── anthropic.ts          ← cliente Claude (+ mock)
 │   └── mockResponder.ts      ← responder determinístico p/ demo sem chave

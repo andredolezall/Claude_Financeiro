@@ -13,6 +13,7 @@ import { computeKPIs, projectCash } from '../core/finance.js';
 import { buildAlerts } from '../notifications/engine.js';
 import { cobrancasDoDia } from '../notifications/regua.js';
 import { conciliarTenant } from '../services/conciliacaoService.js';
+import { gerarDiagnostico, narrarDiagnostico } from '../services/diagnosticoService.js';
 import { journeySummary } from '../core/journey.js';
 import { DEMO_TENANT_ID } from './seed.js';
 
@@ -57,7 +58,15 @@ async function main(): Promise<void> {
   if (!cobrancas.length) console.log(' (nenhuma cobrança programada para hoje)');
   for (const c of cobrancas) console.log(` • [${c.tom}] ${c.mensagem}`);
 
-  sep('5) Dashboard — KPIs, previsão de caixa, alertas e jornada');
+  sep('5) Diagnóstico do DG — o que está drenando resultado (quantificado)');
+  const diag = gerarDiagnostico(deps.store, tenantId, now);
+  console.log(diag.resumo);
+  console.log(`\nPlano de ação proposto (priorizado por impacto):`);
+  for (const p of diag.planoProposto) console.log(` • ${p.acao} — meta: ${p.metricaSucesso} (prazo ${p.prazo})`);
+  const narracao = await narrarDiagnostico(deps.claude, deps.kb, deps.store, tenantId, diag.findings);
+  console.log(`\n🤖 DG (narração didática):\n${narracao}`);
+
+  sep('6) Dashboard — KPIs, previsão de caixa, alertas e jornada');
   const txns = deps.store.listTransactions(tenantId);
   const recs = deps.store.listReceivables(tenantId);
   const pays = deps.store.listPayables(tenantId);

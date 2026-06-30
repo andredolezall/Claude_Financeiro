@@ -55,6 +55,7 @@ imprevisível), não um usuário de finança pessoal.
 | **Finanças/KPIs** | `src/core/finance.ts` | entra/sai/sobra, saldo, recebíveis, **projeção de caixa** + 1º dia negativo. |
 | **Conciliação de recebíveis** | `src/core/conciliacao.ts`, `src/services/conciliacaoService.ts` | Casa receita × recebível (contraparte+valor+data); baixa automática (Pro+) ou sugerida (Starter). Elimina divergências. |
 | **Régua de cobrança** | `src/notifications/regua.ts` | Dunning escalonado (antes/no dia/depois) ancorado no vencimento; gating: Starter sem régua, Pro básica, Enterprise completa. |
+| **Diagnóstico do DG** | `src/dg/diagnostico.ts`, `src/services/diagnosticoService.ts` | Detectores puros quantificam o que drena resultado (R$/mês, base medido/estimado), propõem plano priorizado e avançam a jornada; o DG narra didaticamente sem alterar números (Regra nº 1). |
 | **DG — extração** | `src/dg/extraction.ts` | "recebi 350 da Maria pelo pix" → JSON; limiar de confirmação. Modelo barato (COGS). |
 | **DG — consultor** | `src/dg/consultant.ts`, `src/dg/prompt.ts` | RAG + contexto + jornada → conselho; gating do `dg_consultor`. |
 | **RAG (2 coleções)** | `src/dg/rag.ts` | `kb_curado_dgr` (citável) **separado** de `kb_aprendizado_anon` (interno). |

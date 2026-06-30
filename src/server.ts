@@ -21,6 +21,7 @@ import { computeKPIs, projectCash } from './core/finance.js';
 import { buildAlerts } from './notifications/engine.js';
 import { cobrancasDoDia } from './notifications/regua.js';
 import { conciliarTenant } from './services/conciliacaoService.js';
+import { gerarDiagnostico } from './services/diagnosticoService.js';
 import { journeySummary } from './core/journey.js';
 import { PLANS } from './core/entitlements.js';
 import { loadWhatsAppConfig, verifyWebhook, validateSignature, parseInbound } from './whatsapp/cloudApi.js';
@@ -130,6 +131,22 @@ export function createApp(deps: AppDeps) {
           aRevisar: out.aRevisar.map((m) => ({ recebivel: m.receivable.id, confianca: m.confidence })),
           recebiveisEmAberto: out.result.recebiveisEmAberto.length,
           receitasSemRecebivel: out.result.receitasSemRecebivel.length,
+        });
+      }
+
+      // --- Diagnóstico do DG (gera achados quantificados + plano + avança jornada) ---
+      const diag = path.match(/^\/api\/tenants\/([^/]+)\/diagnostico$/);
+      if (diag && req.method === 'POST') {
+        const tenantId = decodeURIComponent(diag[1]);
+        const tenant = deps.store.getTenant(tenantId);
+        if (!tenant) return json(res, 404, { error: 'tenant não encontrado' });
+        const out = gerarDiagnostico(deps.store, tenantId, new Date());
+        return json(res, 200, {
+          impactoTotalR$: out.impactoTotalR$,
+          etapaJornada: out.journeyStage,
+          achados: out.findings,
+          planoProposto: out.planoProposto,
+          resumo: out.resumo,
         });
       }
 
