@@ -72,6 +72,7 @@ export function gerarDiagnostico(
   const planoProposto = planoFromFindings(findings, now);
   let journey = store.getJourney(tenantId);
 
+  const totalImpacto = impactoTotal(findings);
   // Persiste achados e plano proposto na jornada.
   journey = {
     ...journey,
@@ -79,8 +80,10 @@ export function gerarDiagnostico(
     plano: planoProposto,
     atualizadoEm: now.toISOString(),
   };
-  // Avança a jornada só quando há diagnóstico quantificado (critério da etapa 1).
+  // Avança a jornada só quando há diagnóstico quantificado (critério da etapa 1) e
+  // fixa a LINHA DE BASE do ciclo (para medir o ganho no fim — etapa Resultado).
   if (findings.length && journey.stage === 'diagnostico') {
+    journey = { ...journey, baselineImpactoR$: totalImpacto };
     journey = advance(journey, `Diagnóstico gerado: ${findings.length} achado(s)`, now.toISOString());
   }
   store.setJourney(journey);

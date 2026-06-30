@@ -14,6 +14,7 @@ import { buildAlerts } from '../notifications/engine.js';
 import { cobrancasDoDia } from '../notifications/regua.js';
 import { conciliarTenant } from '../services/conciliacaoService.js';
 import { gerarDiagnostico, narrarDiagnostico } from '../services/diagnosticoService.js';
+import { confirmarOrientacao, iniciarExecucao, concluirAcao, medirResultado } from '../services/acompanhamentoService.js';
 import { journeySummary } from '../core/journey.js';
 import { DEMO_TENANT_ID } from './seed.js';
 
@@ -79,6 +80,18 @@ async function main(): Promise<void> {
     console.log(` • [${a.type}] ${a.mensagem}`);
   }
   console.log('\nJornada:\n' + journeySummary(deps.store.getJourney(tenantId)));
+
+  sep('7) Do plano ao lucro — acompanhamento e medição do resultado (case)');
+  confirmarOrientacao(deps.store, tenantId, now); // dono concorda
+  iniciarExecucao(deps.store, tenantId, now); // começa a executar
+  console.log('Etapa após iniciar execução:', deps.store.getJourney(tenantId).stage);
+  // Simula a execução real: o recebível atrasado do Mercadinho foi cobrado e recebido.
+  const atrasado = deps.store.listReceivables(tenantId).find((r) => r.status === 'atrasado');
+  if (atrasado) { atrasado.status = 'recebido'; atrasado.recebidoEm = now.toISOString(); }
+  for (const p of diag.planoProposto) concluirAcao(deps.store, tenantId, p.id, now);
+  const resultado = medirResultado(deps.store, tenantId, now);
+  console.log(`\n📈 ${resultado.case}`);
+  console.log(`Etapa da jornada após medir (reinicia ciclo): ${resultado.etapaJornada}`);
 }
 
 main().catch((e) => {

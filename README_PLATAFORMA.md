@@ -81,6 +81,7 @@ src/
 │   └── types.ts              ← modelo de domínio multi-tenant
 ├── services/conciliacaoService.ts ← aplica baixas no store conforme o plano
 ├── services/diagnosticoService.ts ← roda diagnóstico, persiste na jornada, propõe plano
+├── services/acompanhamentoService.ts ← arco até o lucro: executa, cobra, mede resultado
 ├── notifications/regua.ts    ← régua de cobrança (dunning) escalonada
 ├── dg/
 │   ├── prompt.ts             ← montagem do system prompt do DG

@@ -93,6 +93,10 @@ export interface JourneyState {
   diagnosticos: { problema: string; impactoMensalR$: number; fonte: string }[];
   /** Passos do plano de ação. */
   plano: PlanoAcaoItem[];
+  /** Impacto total drenado medido no início do ciclo (linha de base p/ medir ganho). */
+  baselineImpactoR$?: number;
+  /** Resultado medido ao fim do ciclo (antes/depois) — vira o "case" de ROI. */
+  resultado?: { antesR$: number; depoisR$: number; ganhoMensalR$: number; medidoEm: string };
   atualizadoEm: string;
   historico: { de: JourneyStage; para: JourneyStage; em: string; motivo: string }[];
 }
@@ -148,6 +152,9 @@ export function restartCycle(state: JourneyState, motivo: string, now: string): 
   return {
     ...state,
     stage: 'diagnostico',
+    // Novo ciclo: zera a linha de base e o resultado do ciclo anterior.
+    baselineImpactoR$: undefined,
+    resultado: undefined,
     atualizadoEm: now,
     historico: [
       ...state.historico,

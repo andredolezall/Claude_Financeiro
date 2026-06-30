@@ -22,6 +22,7 @@ import { buildAlerts } from './notifications/engine.js';
 import { cobrancasDoDia } from './notifications/regua.js';
 import { conciliarTenant } from './services/conciliacaoService.js';
 import { gerarDiagnostico } from './services/diagnosticoService.js';
+import { confirmarOrientacao, iniciarExecucao, concluirAcao, medirResultado, progressoPlano, lembretesDeExecucao } from './services/acompanhamentoService.js';
 import { journeySummary } from './core/journey.js';
 import { PLANS } from './core/entitlements.js';
 import { loadWhatsAppConfig, verifyWebhook, validateSignature, parseInbound } from './whatsapp/cloudApi.js';
@@ -113,9 +114,35 @@ export function createApp(deps: AppDeps) {
           kpis,
           previsaoCaixa: { primeiroDiaNegativo: proj.primeiroDiaNegativo, serie: proj.serie },
           jornada: journeySummary(deps.store.getJourney(tenantId)),
+          progressoPlano: progressoPlano(deps.store, tenantId),
+          lembretesExecucao: lembretesDeExecucao(deps.store, tenantId, now),
+          resultado: deps.store.getJourney(tenantId).resultado ?? null,
           alertas: alerts,
           cobrancasHoje: cobrancas,
         });
+      }
+
+      // --- Avanço do arco "Do Diagnóstico ao Lucro" ---
+      const jornada = path.match(/^\/api\/tenants\/([^/]+)\/jornada\/([^/]+)$/);
+      if (jornada && req.method === 'POST') {
+        const tenantId = decodeURIComponent(jornada[1]);
+        const acao = jornada[2];
+        if (!deps.store.getTenant(tenantId)) return json(res, 404, { error: 'tenant não encontrado' });
+        const now = new Date();
+        try {
+          if (acao === 'confirmar-orientacao') return json(res, 200, { stage: confirmarOrientacao(deps.store, tenantId, now).stage });
+          if (acao === 'iniciar-execucao') return json(res, 200, { stage: iniciarExecucao(deps.store, tenantId, now).stage });
+          if (acao === 'medir-resultado') return json(res, 200, medirResultado(deps.store, tenantId, now));
+          if (acao === 'concluir-acao') {
+            const body = JSON.parse((await readBody(req)) || '{}') as { planoItemId?: string };
+            if (!body.planoItemId) return json(res, 400, { error: 'planoItemId obrigatório' });
+            const j = concluirAcao(deps.store, tenantId, body.planoItemId, now);
+            return json(res, 200, { progresso: progressoPlano(deps.store, tenantId), stage: j.stage });
+          }
+          return json(res, 404, { error: `ação de jornada desconhecida: ${acao}` });
+        } catch (e) {
+          return json(res, 409, { error: (e as Error).message });
+        }
       }
 
       // --- Conciliação de recebíveis (aplica baixas conforme o plano) ---
