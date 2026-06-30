@@ -23,6 +23,7 @@ export function seedDemoTenant(store: MemoryStore): Tenant {
     plano: 'pro',
     consenteAprendizadoAgregado: false, // opt-in: default não contribui (Regra nº 7)
     whatsappOptIn: true,
+    custoVariavelPct: 0.55, // premissa de custo (insumos/produção) — a calibrar com o dono
     criadoEm: '2026-06-01T00:00:00.000Z',
   };
   store.createTenant(tenant);

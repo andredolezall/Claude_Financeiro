@@ -22,6 +22,13 @@ export interface Tenant {
   /** Consentimento explícito para contribuir com a camada de aprendizado agregado. Default: false (opt-in). */
   consenteAprendizadoAgregado: boolean;
   whatsappOptIn: boolean;
+  /**
+   * Custo variável médio como fração do faturamento (0..1) — premissa para projetar
+   * lucro/prejuízo de uma oportunidade. É ESTIMATIVA até o dono calibrar (Regra nº 1).
+   */
+  custoVariavelPct?: number;
+  /** Capacidade mensal de entrega informada pelo dono (R$). Se ausente, é estimada. */
+  capacidadeMensalInformadaR$?: number;
   criadoEm: string; // ISO date
 }
 

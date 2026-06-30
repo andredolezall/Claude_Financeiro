@@ -24,6 +24,7 @@ import { conciliarTenant } from './services/conciliacaoService.js';
 import { gerarDiagnostico } from './services/diagnosticoService.js';
 import { confirmarOrientacao, iniciarExecucao, concluirAcao, medirResultado, progressoPlano, lembretesDeExecucao } from './services/acompanhamentoService.js';
 import { painelCRM, criarLead } from './services/crmService.js';
+import { gerarBriefViabilizacao, registrarDecisao, consolidarAprendizados } from './services/viabilizacaoService.js';
 import { journeySummary } from './core/journey.js';
 import { PLANS, hasFeature, FeatureLockedError } from './core/entitlements.js';
 import { loadWhatsAppConfig, verifyWebhook, validateSignature, parseInbound } from './whatsapp/cloudApi.js';
@@ -193,6 +194,40 @@ export function createApp(deps: AppDeps) {
           planoProposto: out.planoProposto,
           resumo: out.resumo,
         });
+      }
+
+      // --- Viabilização de oportunidade (brief do DG) ---
+      const viab = path.match(/^\/api\/tenants\/([^/]+)\/leads\/([^/]+)\/viabilizar$/);
+      if (viab && req.method === 'POST') {
+        const tenantId = decodeURIComponent(viab[1]);
+        if (!deps.store.getTenant(tenantId)) return json(res, 404, { error: 'tenant não encontrado' });
+        try {
+          const brief = gerarBriefViabilizacao(deps.store, tenantId, decodeURIComponent(viab[2]), new Date());
+          return json(res, 200, brief);
+        } catch (e) {
+          if (e instanceof FeatureLockedError) return json(res, 402, { error: e.message, upgradeTo: e.upgradeTo });
+          return json(res, 400, { error: (e as Error).message });
+        }
+      }
+
+      // --- Registro da decisão do dono (alimenta a base) ---
+      const dec = path.match(/^\/api\/tenants\/([^/]+)\/leads\/([^/]+)\/decisao$/);
+      if (dec && req.method === 'POST') {
+        const tenantId = decodeURIComponent(dec[1]);
+        if (!deps.store.getTenant(tenantId)) return json(res, 404, { error: 'tenant não encontrado' });
+        const body = JSON.parse((await readBody(req)) || '{}') as { opcao?: string; resultado?: 'ganho' | 'perdido' | 'pendente'; observacao?: string };
+        if (!body.opcao) return json(res, 400, { error: 'opcao obrigatória' });
+        try {
+          const out = registrarDecisao(deps.store, tenantId, decodeURIComponent(dec[2]), body.opcao, body.resultado ?? 'pendente', new Date(), body.observacao);
+          return json(res, 200, { sinalRegistrado: out.sinalRegistrado, consentido: out.consentido });
+        } catch (e) {
+          return json(res, 400, { error: (e as Error).message });
+        }
+      }
+
+      // --- Consolidação offline dos aprendizados anonimizados (job global) ---
+      if (path === '/api/aprendizados/consolidar' && req.method === 'POST') {
+        return json(res, 200, consolidarAprendizados(deps.store, deps.kb));
       }
 
       // --- Mensagem simulada (texto) ---

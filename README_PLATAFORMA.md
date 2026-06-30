@@ -25,6 +25,10 @@ Esta plataforma (TypeScript, em `src/`) é a evolução para o produto SaaS da D
 - **Notificações**: contas a pagar/receber, caixa baixo, **risco de caixa negativo** (proativo).
 - **CRM + agenda inteligente**: pipeline, follow-ups, **capacidade × oportunidade**
   (não gerar demanda que não se entrega), sugestão de abordagem do DG (Enterprise).
+- **Viabilização de oportunidade**: quando não dá para atender, o DG explica o porquê,
+  oferece opções A/B/C, recomenda com fatores, **projeta faturamento/custo/lucro** e o
+  valor estratégico — e **devolve a decisão ao dono**. A decisão fortalece a base
+  anonimizada (consentimento + limiar N≥X).
 - **Aprendizado anonimizado entre tenants** com trava de privacidade (opt-in + scrub PII + N≥X).
 - **Ambiente de demonstração** com uma PME fictícia.
 
@@ -86,6 +90,8 @@ src/
 ├── services/diagnosticoService.ts ← roda diagnóstico, persiste na jornada, propõe plano
 ├── services/acompanhamentoService.ts ← arco até o lucro: executa, cobra, mede resultado
 ├── services/crmService.ts    ← CRM: leads, follow-ups, capacidade × oportunidade
+├── services/viabilizacaoService.ts ← brief de viabilização + decisão do dono + base
+├── dg/viabilizacao.ts        ← restrições, opções A/B/C, recomendação, projeção (puro)
 ├── notifications/regua.ts    ← régua de cobrança (dunning) escalonada
 ├── dg/
 │   ├── prompt.ts             ← montagem do system prompt do DG

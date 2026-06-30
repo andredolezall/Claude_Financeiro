@@ -37,6 +37,18 @@ ser tratadas como ambição, não baseline:
 - Realistas: LTV/CAC ≥ 4, margem ≥ 70%, NRR ≥ 105%, TTV ≤ 7 dias.
 - **Definir**: churn ≤ 5% é mensal ou anual? Muda completamente a leitura.
 
+## D0. Premissas da viabilização de oportunidade (calibrar com o dono)
+
+O brief de viabilização projeta **lucro/prejuízo** a partir de duas premissas por tenant —
+hoje com defaults marcados `estimado` (Regra nº 1). Precisam ser calibradas com o empresário:
+
+| Premissa | Campo | Default atual | Ação |
+|---|---|---|---|
+| Custo variável (% do faturamento) | `Tenant.custoVariavelPct` | 0,60 (demo: 0,55) | Levantar o custo variável real por tenant/setor |
+| Capacidade mensal de entrega (R$) | `Tenant.capacidadeMensalInformadaR$` | estimada pela média de receita | Pedir a capacidade real ao dono; a estimativa é só ponto de partida |
+| Fator de custo da terceirização | `FATOR_TERCEIRIZACAO` (viabilizacao.ts) | 0,35 | Validar com cotação real de parceiros do setor |
+| Refinamento da recomendação | — | hoje favorece margem (opção B) | Incluir urgência/prazo do cliente para às vezes recomendar A |
+
 ## D. Decisões de produto a validar contra margem/COGS
 
 - A **matriz de planos × recursos** (§7.1, implementada) é hipótese: validar que cada recurso

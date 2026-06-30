@@ -10,6 +10,7 @@ import type {
   AgendaItem, Lead, Payable, Receivable, Tenant, Transaction, User,
 } from '../core/types.js';
 import { createJourney, type JourneyState } from '../core/journey.js';
+import type { TenantSignal } from '../learning/anonymization.js';
 
 let seq = 0;
 export function genId(prefix: string): string {
@@ -26,6 +27,8 @@ export class MemoryStore {
   private agenda = new Map<string, AgendaItem[]>();
   private leads = new Map<string, Lead[]>();
   private journeys = new Map<string, JourneyState>();
+  /** Sinais brutos de decisão por tenant — só a versão agregada/anonimizada sai daqui. */
+  private signals = new Map<string, TenantSignal[]>();
 
   // --- tenants ---
   createTenant(t: Tenant): Tenant {
@@ -34,6 +37,7 @@ export class MemoryStore {
     for (const m of [this.txns, this.receivables, this.payables, this.agenda, this.leads]) {
       if (!m.has(t.id)) m.set(t.id, []);
     }
+    if (!this.signals.has(t.id)) this.signals.set(t.id, []);
     return t;
   }
   getTenant(id: string): Tenant | undefined {
@@ -118,5 +122,20 @@ export class MemoryStore {
   listLeads(tenantId: string): Lead[] {
     this.assertTenant(tenantId);
     return [...this.leads.get(tenantId)!];
+  }
+
+  // --- learning signals (dado bruto do tenant; agregação/anonimização à parte) ---
+  addSignal(s: TenantSignal): TenantSignal {
+    this.assertTenant(s.tenantId);
+    this.signals.get(s.tenantId)!.push(s);
+    return s;
+  }
+  listSignals(tenantId: string): TenantSignal[] {
+    this.assertTenant(tenantId);
+    return [...this.signals.get(tenantId)!];
+  }
+  /** Todos os sinais de todos os tenants — usado SÓ pelo job offline de aprendizado. */
+  listAllSignals(): TenantSignal[] {
+    return [...this.signals.values()].flat();
   }
 }
