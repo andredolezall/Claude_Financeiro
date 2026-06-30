@@ -23,7 +23,8 @@ Esta plataforma (TypeScript, em `src/`) é a evolução para o produto SaaS da D
 - **Régua de cobrança automática**: lembretes escalonados (antes/no dia/após o vencimento).
 - **Dashboard**: KPIs (entra/sai/sobra, recebíveis, **previsão de caixa**) via API HTTP.
 - **Notificações**: contas a pagar/receber, caixa baixo, **risco de caixa negativo** (proativo).
-- **CRM + agenda inteligente**: pipeline, follow-ups, capacidade × oportunidade, sugestão do DG.
+- **CRM + agenda inteligente**: pipeline, follow-ups, **capacidade × oportunidade**
+  (não gerar demanda que não se entrega), sugestão de abordagem do DG (Enterprise).
 - **Aprendizado anonimizado entre tenants** com trava de privacidade (opt-in + scrub PII + N≥X).
 - **Ambiente de demonstração** com uma PME fictícia.
 
@@ -54,6 +55,8 @@ npm run build && npm start
 #   POST http://localhost:3000/api/tenants/demo_padaria/message  {"text":"recebi 350 da Maria pelo pix"}
 #   POST http://localhost:3000/api/tenants/demo_padaria/conciliar  (concilia recebíveis)
 #   POST http://localhost:3000/api/tenants/demo_padaria/diagnostico  (diagnóstico quantificado)
+#   POST http://localhost:3000/api/tenants/demo_padaria/jornada/medir-resultado  (case de ROI)
+#   POST http://localhost:3000/api/tenants/demo_padaria/leads  {"nome":"Escola X","valorPotencial":6000}
 ```
 
 ## Variáveis de ambiente
@@ -82,6 +85,7 @@ src/
 ├── services/conciliacaoService.ts ← aplica baixas no store conforme o plano
 ├── services/diagnosticoService.ts ← roda diagnóstico, persiste na jornada, propõe plano
 ├── services/acompanhamentoService.ts ← arco até o lucro: executa, cobra, mede resultado
+├── services/crmService.ts    ← CRM: leads, follow-ups, capacidade × oportunidade
 ├── notifications/regua.ts    ← régua de cobrança (dunning) escalonada
 ├── dg/
 │   ├── prompt.ts             ← montagem do system prompt do DG

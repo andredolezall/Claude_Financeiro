@@ -64,7 +64,7 @@ imprevisível), não um usuário de finança pessoal.
 | **WhatsApp Cloud API** | `src/whatsapp/cloudApi.ts` | Verificação webhook, **assinatura HMAC**, parse inbound, envio texto/template. |
 | **Pipeline** | `src/pipeline.ts` | mensagem → extrai → persiste → responde; o "coração" do MVP. |
 | **Notificações** | `src/notifications/engine.ts` | Contas a pagar/receber, caixa baixo, **risco de caixa negativo** (proativo). |
-| **CRM + agenda** | `src/crm/crm.ts` | Leads/pipeline, follow-ups, **capacidade × oportunidade**, sugestão de abordagem do DG. |
+| **CRM + agenda** | `src/crm/crm.ts`, `src/services/crmService.ts` | Leads/pipeline, follow-ups na agenda, **capacidade × oportunidade**, sugestão de abordagem do DG (Enterprise). Gating: Starter none, Pro basic, Enterprise priority. |
 | **Aprendizado anonimizado** | `src/learning/anonymization.ts` | opt-in + scrub PII + limiar N≥X + coleção separada (Regra nº 7 / §5.4). |
 | **Store** | `src/store/memoryStore.ts` | Isolamento por tenant (referência; troca por Postgres+RLS em produção). |
 | **Servidor** | `src/server.ts` | Webhook + API de dashboard + endpoint de mensagem (demo). |

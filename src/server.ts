@@ -23,8 +23,9 @@ import { cobrancasDoDia } from './notifications/regua.js';
 import { conciliarTenant } from './services/conciliacaoService.js';
 import { gerarDiagnostico } from './services/diagnosticoService.js';
 import { confirmarOrientacao, iniciarExecucao, concluirAcao, medirResultado, progressoPlano, lembretesDeExecucao } from './services/acompanhamentoService.js';
+import { painelCRM, criarLead } from './services/crmService.js';
 import { journeySummary } from './core/journey.js';
-import { PLANS } from './core/entitlements.js';
+import { PLANS, hasFeature, FeatureLockedError } from './core/entitlements.js';
 import { loadWhatsAppConfig, verifyWebhook, validateSignature, parseInbound } from './whatsapp/cloudApi.js';
 import { seedDemoTenant, seedKnowledgeBase } from './demo/seed.js';
 import { DGR_CONSTITUTION } from './core/dgr_constitution.js';
@@ -119,7 +120,24 @@ export function createApp(deps: AppDeps) {
           resultado: deps.store.getJourney(tenantId).resultado ?? null,
           alertas: alerts,
           cobrancasHoje: cobrancas,
+          crm: hasFeature(tenant.plano, 'crm_agenda') ? painelCRM(deps.store, tenantId, now) : null,
         });
+      }
+
+      // --- CRM: criar lead ---
+      const leads = path.match(/^\/api\/tenants\/([^/]+)\/leads$/);
+      if (leads && req.method === 'POST') {
+        const tenantId = decodeURIComponent(leads[1]);
+        if (!deps.store.getTenant(tenantId)) return json(res, 404, { error: 'tenant não encontrado' });
+        const body = JSON.parse((await readBody(req)) || '{}') as { nome?: string; valorPotencial?: number; contato?: string; ticketMedio?: number };
+        if (!body.nome || body.valorPotencial == null) return json(res, 400, { error: 'nome e valorPotencial obrigatórios' });
+        try {
+          const lead = criarLead(deps.store, tenantId, { nome: body.nome, valorPotencial: body.valorPotencial, contato: body.contato, ticketMedio: body.ticketMedio }, new Date());
+          return json(res, 201, { id: lead.id, estagio: lead.estagio });
+        } catch (e) {
+          if (e instanceof FeatureLockedError) return json(res, 402, { error: e.message, upgradeTo: e.upgradeTo });
+          throw e;
+        }
       }
 
       // --- Avanço do arco "Do Diagnóstico ao Lucro" ---

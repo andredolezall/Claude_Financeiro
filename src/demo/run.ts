@@ -15,6 +15,8 @@ import { cobrancasDoDia } from '../notifications/regua.js';
 import { conciliarTenant } from '../services/conciliacaoService.js';
 import { gerarDiagnostico, narrarDiagnostico } from '../services/diagnosticoService.js';
 import { confirmarOrientacao, iniciarExecucao, concluirAcao, medirResultado } from '../services/acompanhamentoService.js';
+import { painelCRM } from '../services/crmService.js';
+import { suggestApproach } from '../crm/crm.js';
 import { journeySummary } from '../core/journey.js';
 import { DEMO_TENANT_ID } from './seed.js';
 
@@ -92,6 +94,17 @@ async function main(): Promise<void> {
   const resultado = medirResultado(deps.store, tenantId, now);
   console.log(`\n📈 ${resultado.case}`);
   console.log(`Etapa da jornada após medir (reinicia ciclo): ${resultado.etapaJornada}`);
+
+  sep('8) CRM com agenda inteligente — oportunidade × capacidade');
+  const painel = painelCRM(deps.store, tenantId, now);
+  console.log(`Leads abertos: ${painel.leadsAbertos} | Pipeline: R$ ${painel.pipelineR$.toLocaleString('pt-BR')} | capacidade (${painel.capacidadeBaseadaEm})`);
+  console.log(`Análise: ${painel.capacidade.mensagem}`);
+  console.log('Follow-ups pendentes:');
+  for (const f of painel.followUpsPendentes) console.log(` • ${f.titulo} (${f.quando.slice(0, 10)})`);
+  // Sugestão de abordagem do DG (recurso Enterprise — demo é Pro: mostra o gating).
+  const lead = deps.store.listLeads(tenantId)[0];
+  const ab = await suggestApproach(deps.claude, deps.kb, tenant, deps.store.getJourney(tenantId), lead);
+  console.log(`\n🤖 DG — abordagem para "${lead.nome}" (disponível: ${ab.disponivel}):\n${ab.sugestao}`);
 }
 
 main().catch((e) => {
