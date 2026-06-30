@@ -92,6 +92,7 @@ src/
 ├── services/acompanhamentoService.ts ← arco até o lucro: executa, cobra, mede resultado
 ├── services/crmService.ts    ← CRM: leads, follow-ups, capacidade × oportunidade
 ├── services/viabilizacaoService.ts ← brief de viabilização + decisão do dono + base
+├── services/perfilOperacionalService.ts ← DG aprende a operação (ciclo/capacidade) da conversa
 ├── dg/viabilizacao.ts        ← restrições, opções A/B/C, recomendação, projeção (puro)
 ├── notifications/regua.ts    ← régua de cobrança (dunning) escalonada
 ├── dg/

@@ -25,9 +25,24 @@ function mockExtract(text: string): string {
   const vencMatch = text.match(/dia\s+(\d{1,2})/);
   const vencimento = vencMatch ? `2026-07-${vencMatch[1].padStart(2, '0')}` : null;
 
+  // Fatos operacionais que o DG aprende da conversa.
+  const ehOperacional = /(ciclo|lote|produ[çc][aã]o|entrego|entrega em|capacidade|consigo (entregar|produzir|faturar)|por m[êe]s|custo (de|é|fica)|margem)/.test(t);
+  let cicloEntregaDias: number | null = null;
+  let capacidadeMensalR$: number | null = null;
+  let custoVariavelPct: number | null = null;
+  if (ehOperacional) {
+    const dias = /(\d{1,3})\s*dias?/.exec(t);
+    if (dias && /(ciclo|lote|produ|entrego|entrega|prazo)/.test(t)) cicloEntregaDias = Number(dias[1]);
+    const cap = /(?:entregar|faturar|produzir|capacidade)[^\d]{0,20}(?:r\$\s*)?(\d[\d.]*)\s*(?:mil)?\s*(?:por m[êe]s|\/m[êe]s|mensal|no m[êe]s)?/.exec(t);
+    if (cap) { let n = Number(cap[1].replace(/\./g, '')); if (/mil/.test(t) && n < 1000) n *= 1000; capacidadeMensalR$ = n; }
+    const custo = /custo[^\d]{0,15}(\d{1,3})\s*%/.exec(t) || /(\d{1,3})\s*%\s*(?:de\s*)?custo/.exec(t);
+    if (custo) custoVariavelPct = Number(custo[1]) / 100;
+  }
+
   let intent = 'outro';
   let kind: string | null = null;
-  if (/(recebi|entrou|vendi|me pagou)/.test(t)) { intent = 'lancamento'; kind = 'receita'; }
+  if (cicloEntregaDias != null || capacidadeMensalR$ != null || custoVariavelPct != null) { intent = 'info_operacional'; }
+  else if (/(recebi|entrou|vendi|me pagou)/.test(t)) { intent = 'lancamento'; kind = 'receita'; }
   else if (/(paguei|comprei|gastei|saiu)/.test(t)) { intent = 'lancamento'; kind = 'despesa'; }
   else if (/(vai me pagar|fica devendo|a receber|me paga|deve)/.test(t)) { intent = 'recebivel'; }
   else if (/(lembra|agenda|marca|cobrar dia|reuni[aã]o)/.test(t)) { intent = 'compromisso'; }
@@ -35,8 +50,8 @@ function mockExtract(text: string): string {
 
   const conf = intent === 'outro' ? 0.3 : valor != null || intent !== 'lancamento' ? 0.85 : 0.5;
   return JSON.stringify({
-    intent, kind, valor, contraparte, metodo, categoria: null, descricao: null,
-    dataMencionada: null, vencimento, confianca: conf,
+    intent, kind, valor: intent === 'info_operacional' ? null : valor, contraparte, metodo, categoria: null, descricao: null,
+    dataMencionada: null, vencimento, cicloEntregaDias, capacidadeMensalR$, custoVariavelPct, confianca: conf,
   });
 }
 

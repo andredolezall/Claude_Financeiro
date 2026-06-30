@@ -15,6 +15,7 @@ export type Intent =
   | 'lancamento' // receita/despesa
   | 'recebivel' // a receber
   | 'compromisso' // agenda/lembrete
+  | 'info_operacional' // o dono ensina como sua operação funciona (ciclo, capacidade, custo)
   | 'consulta_gestao' // pergunta de consultoria → roteia para o DG consultor
   | 'outro';
 
@@ -29,15 +30,22 @@ export interface ExtractedEntry {
   /** Data mencionada (ISO) ou null se "hoje"/ausente. */
   dataMencionada?: string | null;
   vencimento?: string | null; // para recebível/compromisso
+  // Campos de info_operacional (o DG aprende a operação do cliente da conversa):
+  /** Duração de um ciclo de produção/entrega, em dias. */
+  cicloEntregaDias?: number;
+  /** Capacidade de faturamento/entrega por mês, em R$. */
+  capacidadeMensalR$?: number;
+  /** Custo variável como fração do faturamento (0..1). */
+  custoVariavelPct?: number;
   /** Confiança do modelo (0–1). Abaixo do limiar → pedir confirmação ao usuário. */
   confianca: number;
 }
 
-const EXTRACTION_SYSTEM = `Você é um extrator de dados financeiros para PMEs brasileiras.
+const EXTRACTION_SYSTEM = `Você é um extrator de dados financeiros e operacionais para PMEs brasileiras.
 Receba uma mensagem em português (linguagem coloquial de WhatsApp) e devolva APENAS um JSON
 válido, sem texto fora do JSON, com o schema:
 {
-  "intent": "lancamento" | "recebivel" | "compromisso" | "consulta_gestao" | "outro",
+  "intent": "lancamento" | "recebivel" | "compromisso" | "info_operacional" | "consulta_gestao" | "outro",
   "kind": "receita" | "despesa" | null,
   "valor": number | null,
   "contraparte": string | null,
@@ -46,14 +54,20 @@ válido, sem texto fora do JSON, com o schema:
   "descricao": string | null,
   "dataMencionada": "YYYY-MM-DD" | null,
   "vencimento": "YYYY-MM-DD" | null,
+  "cicloEntregaDias": number | null,
+  "capacidadeMensalR$": number | null,
+  "custoVariavelPct": number | null,
   "confianca": number
 }
 Regras:
 - "recebi/entrou/vendi" => lancamento, kind=receita. "paguei/comprei/gastei" => lancamento, kind=despesa.
 - "vai me pagar/fica devendo/a receber" => recebivel.
 - "lembra/agenda/marca/cobrar dia X" => compromisso.
+- O dono ENSINANDO como a operação funciona => info_operacional. Ex.: "meu ciclo de produção é 20 dias",
+  "entrego em 15 dias", "consigo faturar/entregar 7 mil por mês", "minha capacidade é X", "meu custo é 55%".
+  Extraia cicloEntregaDias (dias), capacidadeMensalR\$ (R\$/mês) e custoVariavelPct (0..1) quando aparecerem.
 - Pergunta de gestão/conselho ("como melhorar", "vale a pena", "o que faço") => consulta_gestao.
-- valor em reais como número (350.0). NÃO invente dados ausentes: use null.
+- valor/numeros como número. NÃO invente dados ausentes: use null.
 - confianca: 0..1 conforme clareza da mensagem.`;
 
 /** Parser tolerante: extrai o primeiro bloco JSON da resposta do modelo. */
@@ -83,6 +97,9 @@ export function parseExtraction(raw: string): ExtractedEntry {
     descricao: str(obj.descricao),
     dataMencionada: (str(obj.dataMencionada) ?? null) as string | null,
     vencimento: (str(obj.vencimento) ?? null) as string | null,
+    cicloEntregaDias: num(obj.cicloEntregaDias),
+    capacidadeMensalR$: num(obj['capacidadeMensalR$']),
+    custoVariavelPct: num(obj.custoVariavelPct),
     confianca: num(obj.confianca) ?? 0.5,
   };
 }

@@ -126,6 +126,20 @@ async function main(): Promise<void> {
   console.log(`\n✔️ Decisão do dono registrada (consentimento p/ base agregada: ${decisao.consentido}).`);
   const consol = consolidarAprendizados(deps.store, deps.kb);
   console.log(`Base de aprendizado: ${consol.sinaisConsiderados} sinal(is), ${consol.padroesPublicados} padrão(ões) publicado(s) (limiar protege com N baixo).`);
+
+  sep('10) Prazo DINÂMICO — o DG aprende a operação do cliente conversando');
+  const lead2 = criarLead(deps.store, tenantId, { nome: 'Buffet Grande — evento', valorPotencial: 18000, prazoEntregaDias: 50 }, now);
+  const antes = gerarBriefViabilizacao(deps.store, tenantId, lead2.id, now);
+  const bAntes = antes.opcoes.find((o) => o.chave === 'B')!;
+  console.log(`Antes de aprender (ciclo default 30d): faseamento entrega em ~${bAntes.tempoEntregaDias}d → cabe no prazo de 50d? ${bAntes.cabeNoPrazo}`);
+  // O dono ensina o DG sobre a operação dele:
+  const ensino = await handleInbound(deps, { tenantId, fromWhatsapp: '5511999990000', type: 'text', text: 'na verdade meu ciclo de produção é 15 dias e consigo entregar uns 9 mil por mês', timestamp: now.toISOString() });
+  console.log(`\n👤 na verdade meu ciclo de produção é 15 dias e consigo entregar uns 9 mil por mês`);
+  console.log(`🤖 DG: ${ensino.reply}`);
+  const depois = gerarBriefViabilizacao(deps.store, tenantId, lead2.id, now);
+  const bDepois = depois.opcoes.find((o) => o.chave === 'B')!;
+  console.log(`\nDepois de aprender (ciclo 15d): faseamento entrega em ~${bDepois.tempoEntregaDias}d → cabe no prazo de 50d? ${bDepois.cabeNoPrazo}`);
+  console.log('→ O mesmo cálculo de prazo agora é fiel à operação real deste cliente.');
 }
 
 main().catch((e) => {

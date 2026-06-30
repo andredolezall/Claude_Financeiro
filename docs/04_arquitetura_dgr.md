@@ -57,7 +57,8 @@ imprevisível), não um usuário de finança pessoal.
 | **Régua de cobrança** | `src/notifications/regua.ts` | Dunning escalonado (antes/no dia/depois) ancorado no vencimento; gating: Starter sem régua, Pro básica, Enterprise completa. |
 | **Diagnóstico do DG** | `src/dg/diagnostico.ts`, `src/services/diagnosticoService.ts` | Detectores puros quantificam o que drena resultado (R$/mês, base medido/estimado), propõem plano priorizado e avançam a jornada; o DG narra didaticamente sem alterar números (Regra nº 1). |
 | **Acompanhamento → Resultado** | `src/services/acompanhamentoService.ts` | Conduz Orientação→Plano→Acompanhamento→Resultado com guardas de etapa; o DG cobra execução, conclui ações, MEDE antes/depois (case de ROI) e reinicia o ciclo. |
-| **DG — extração** | `src/dg/extraction.ts` | "recebi 350 da Maria pelo pix" → JSON; limiar de confirmação. Modelo barato (COGS). |
+| **DG — extração** | `src/dg/extraction.ts` | "recebi 350 da Maria pelo pix" → JSON; limiar de confirmação. Também capta **fatos operacionais** ("meu ciclo é 20 dias") → `info_operacional`. Modelo barato (COGS). |
+| **Perfil operacional (aprendido)** | `src/services/perfilOperacionalService.ts` | O DG aprende a operação de cada cliente da conversa (ciclo de entrega, capacidade, custo) e calibra o tenant — torna o **prazo dinâmico e fiel a cada cliente**, alimentando a viabilização. |
 | **DG — consultor** | `src/dg/consultant.ts`, `src/dg/prompt.ts` | RAG + contexto + jornada → conselho; gating do `dg_consultor`. |
 | **RAG (2 coleções)** | `src/dg/rag.ts` | `kb_curado_dgr` (citável) **separado** de `kb_aprendizado_anon` (interno). |
 | **Cliente Claude** | `src/dg/anthropic.ts` | Wrapper fino (fetch); modelos por tarefa; cliente mock p/ demo sem custo. |

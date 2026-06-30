@@ -101,6 +101,8 @@ export function gerarBriefViabilizacao(
     perfilRisco: perfil,
     setorTicketMedioR$: opts?.setorTicketMedioR$,
     prazoEntregaDias: opts?.prazoEntregaDias,
+    // Ciclo de entrega aprendido da conversa com ESTE cliente (fiel à operação dele).
+    cicloEntregaDias: tenant.cicloEntregaDias,
   });
 }
 

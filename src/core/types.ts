@@ -40,7 +40,24 @@ export interface Tenant {
   capacidadeMensalInformadaR$?: number;
   /** Apetite de risco informado pelo dono. Se ausente, o DG infere do comportamento. */
   perfilRisco?: PerfilRisco;
+  /**
+   * Duração de um ciclo de produção/entrega (dias), APRENDIDA das conversas com o dono.
+   * Fiel à operação de cada cliente. Se ausente, o DG usa um default e marca como suposição.
+   */
+  cicloEntregaDias?: number;
+  /** Perfil operacional que o DG calibra ao longo do tempo a partir do que o dono conta. */
+  perfilOperacional?: PerfilOperacional;
   criadoEm: string; // ISO date
+}
+
+/**
+ * Perfil operacional aprendido pelo DG conversando com o cliente — torna o
+ * aconselhamento (sobretudo o cálculo de prazo) fiel à operação individual.
+ */
+export interface PerfilOperacional {
+  atualizadoEm: string;
+  /** Fatos operacionais registrados (ex.: "ciclo de entrega ~20 dias", "capacidade R$ 7.000/mês"). */
+  notas: { em: string; fato: string; origem: 'conversa' | 'informado' }[];
 }
 
 export interface User {

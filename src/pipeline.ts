@@ -11,6 +11,7 @@ import { computeKPIs } from './core/finance.js';
 import type { JourneyState } from './core/journey.js';
 import type { InboundMessage, Transaction, Receivable, AgendaItem } from './core/types.js';
 import { extractEntry, needsConfirmation, type ExtractedEntry } from './dg/extraction.js';
+import { aplicarInfoOperacional } from './services/perfilOperacionalService.js';
 import { consult } from './dg/consultant.js';
 import type { ClaudeClient } from './dg/anthropic.js';
 import { KnowledgeBase } from './dg/rag.js';
@@ -75,6 +76,16 @@ export async function handleInbound(deps: PipelineDeps, msg: InboundMessage): Pr
       return persistRecebivel(deps, tenant.id, entry, now);
     case 'compromisso':
       return persistCompromisso(deps, tenant.id, entry, now, text);
+    case 'info_operacional': {
+      const { atualizou } = aplicarInfoOperacional(deps.store, tenant.id, entry, now);
+      if (!atualizou.length) {
+        return { reply: 'Entendi que é sobre sua operação, mas não captei o número. Pode repetir? Ex.: "meu ciclo de entrega é 20 dias".', extracted: entry };
+      }
+      return {
+        reply: `📝 Aprendi sobre sua operação: ${atualizou.join('; ')}. Vou usar isso pra calcular prazos e viabilidade do seu jeito.`,
+        extracted: entry,
+      };
+    }
     case 'consulta_gestao': {
       const { answer } = await consult(deps.claude, deps.kb, {
         tenant, journey, question: text, businessSnapshot: snapshot(deps.store, tenant.id, now),

@@ -47,7 +47,7 @@ hoje com defaults marcados `estimado` (Regra nº 1). Precisam ser calibradas com
 | Custo variável (% do faturamento) | `Tenant.custoVariavelPct` | 0,60 (demo: 0,55) | Levantar o custo variável real por tenant/setor |
 | Capacidade mensal de entrega (R$) | `Tenant.capacidadeMensalInformadaR$` | estimada pela média de receita | Pedir a capacidade real ao dono; a estimativa é só ponto de partida |
 | Fator de custo da terceirização | `FATOR_TERCEIRIZACAO` (viabilizacao.ts) | 0,35 | Validar com cotação real de parceiros do setor |
-| Duração de um ciclo de entrega (dias) | `cicloEntregaDias` | 30 | Calibrar por setor (perecível/serviço/produção têm ciclos diferentes) |
+| Duração de um ciclo de entrega (dias) | `Tenant.cicloEntregaDias` | 30 até o DG aprender | **Aprendido da conversa** (o dono conta; o DG calibra por cliente). Default só vale antes do primeiro aprendizado. |
 | Perfil de risco | `Tenant.perfilRisco` (senão inferido) | inferido de caixa + histórico | Confirmar com o dono; a inferência é heurística inicial e melhora com o histórico de decisões |
 
 > **Implementado nesta rodada:** o brief agora considera o **prazo de entrega do cliente**
